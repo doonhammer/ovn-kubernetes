@@ -151,7 +151,7 @@ sudo ip link set  br-enp0s9 up
 # Start a gateway
 sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" \
                                  --bridge-interface br-enp0s9 \
-                                 --physical-ip $PUBLIC_IP/$CIDR \
+                                 --physical-ip $PUBLIC_IP/$PUBLIC_SUBNET_MASK \
                                  --node-name="$FIREWALL_NAME" --default-gw $GW_IP
 
 # Start the gateway helper.
