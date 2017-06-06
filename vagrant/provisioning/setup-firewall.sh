@@ -87,6 +87,8 @@ git pull origin "sfc.v30"
 make
 sudo make install
 sudo make modules_install
+sudo modprobe openvswitch
+sudo modprobe vport_geneve
 # Start the daemons
 #sudo /etc/init.d/openvswitch-switch force-reload-kmod
 sudo /usr/share/openvswitch/scripts/ovs-ctl start --system-id=random
@@ -102,8 +104,7 @@ if [ -n "$SSL" ]; then
                 external_ids:ovn-remote="ssl:$MASTER_OVERLAY_IP:6642" \
                 external_ids:ovn-nb="ssl:$MASTER_OVERLAY_IP:6641" \
                 external_ids:ovn-encap-ip=$FIREWALL_OVERLAY_IP \
-                external_ids:ovn-encap-type=geneve \
-                external-ids:system-id=random
+                external_ids:ovn-encap-type=geneve
 
     # Set ovn-controller SSL options in /etc/default/ovn-host
     sudo bash -c 'cat >> /etc/default/ovn-host <<EOF

@@ -81,6 +81,8 @@ git pull origin "sfc.v30"
 make
 sudo make install
 sudo make modules_install
+sudo modprobe openvswitch
+sudo modprobe vport_geneve
 # Start the daemons
 #sudo /etc/init.d/openvswitch-switch force-reload-kmod
 sudo /usr/share/openvswitch/scripts/ovs-ctl start --system-id=random

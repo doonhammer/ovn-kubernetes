@@ -61,6 +61,8 @@ git pull origin "sfc.v30"
 make
 sudo make install
 sudo make modules_install
+sudo modprobe openvswitch
+sudo modprobe vport_geneve
 #sudo DEB_BUILD_OPTIONS='nocheck parallel=2' fakeroot debian/rules binary
 
 # Install OVS/OVN debs
