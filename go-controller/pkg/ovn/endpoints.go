@@ -111,12 +111,7 @@ func (ovn *Controller) addEndpoints(ep *kapi.Endpoints) error {
 func (ovn *Controller) deleteEndpoints(ep *kapi.Endpoints) error {
 	svc, err := ovn.Kube.GetService(ep.Namespace, ep.Name)
 	if err != nil {
-		// This is not necessarily an error. For e.g when a service is deleted,
-		// you will get endpoint delete event and the call to fetch service
-		// will fail.
-		logrus.Debugf("no service found for endpoint %s in namespace %s",
-			ep.Name, ep.Namespace)
-		return nil
+		return err
 	}
 	for _, svcPort := range svc.Spec.Ports {
 		lb := ovn.getLoadBalancer(svcPort.Protocol)

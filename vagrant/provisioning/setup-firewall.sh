@@ -6,27 +6,27 @@ set -o xtrace
 
 # ARGS:
 # $1: IP of second interface of master
-# $2: IP of second interface of minion
+# $2: IP of second interface of firewall
 # $3: IP of third interface of master
-# $4: Hostname of specific minion
+# $4: Hostname of specific firewall
 # $5: Subnet to use
 
 MASTER_OVERLAY_IP=$1
-MINION_OVERLAY_IP=$2
+FIREWALL_OVERLAY_IP=$2
 PUBLIC_IP=$3
 PUBLIC_SUBNET_MASK=$4
-MINION_NAME=$5
-MINION_SUBNET=$6
+FIREWALL_NAME=$5
+FIREWALL_SUBNET=$6
 GW_IP=$7
 CIDR=$8
 
-cat > setup_minion_args.sh <<EOL
+cat > setup_firewall_args.sh <<EOL
 MASTER_OVERLAY_IP=$1
-MINION_OVERLAY_IP=$2
+FIREWALL_OVERLAY_IP=$2
 PUBLIC_IP=$3
 PUBLIC_SUBNET_MASK=$4
-MINION_NAME=$5
-MINION_SUBNET=$6
+FIREWALL_NAME=$5
+FIREWALL_SUBNET=$6
 GW_IP=$7
 CIDR=$8
 EOL
@@ -35,7 +35,7 @@ EOL
 #SSL="true"
 
 # FIXME(mestery): Remove once Vagrant boxes allow apt-get to work again
-#sudo rm -rf /var/lib/apt/lists/*
+sudo rm -rf /var/lib/apt/lists/*
 
 # First, install docker
 #sudo yum -y update
@@ -61,8 +61,14 @@ sudo yum install -y "kernel-devel-uname-r == $(uname -r)"
 sudo yum install -y autoconf automake bzip2 wget \
                         libtool openssl openssl-devel procps \
                         python-six git libcap-ng \
-                        libcap-ng-devel epel-release
+                        libcap-ng-devel epel-release \
+                        qemu-kvm qemu-img libvirt libvirt-client \
+                        libvirt-daemon-kvm qemu-kvm-tools
 
+#
+# Start libvirtd
+sudo systemctl enable libvirtd
+sudo systemctl start libvirtd
 #git clone https://github.com/openvswitch/ovs.git
 git clone https://github.com/doonhammer/ovs.git
 pushd ovs/
@@ -95,8 +101,9 @@ if [ -n "$SSL" ]; then
     sudo ovs-vsctl set Open_vSwitch . \
                 external_ids:ovn-remote="ssl:$MASTER_OVERLAY_IP:6642" \
                 external_ids:ovn-nb="ssl:$MASTER_OVERLAY_IP:6641" \
-                external_ids:ovn-encap-ip=$MINION_OVERLAY_IP \
-                external_ids:ovn-encap-type=geneve
+                external_ids:ovn-encap-ip=$FIREWALL_OVERLAY_IP \
+                external_ids:ovn-encap-type=geneve \
+                external-ids:system-id=random
 
     # Set ovn-controller SSL options in /etc/default/ovn-host
     sudo bash -c 'cat >> /etc/default/ovn-host <<EOF
@@ -107,13 +114,13 @@ else
     sudo ovs-vsctl set Open_vSwitch . \
                 external_ids:ovn-remote="tcp:$MASTER_OVERLAY_IP:6642" \
                 external_ids:ovn-nb="tcp:$MASTER_OVERLAY_IP:6641" \
-                external_ids:ovn-encap-ip=$MINION_OVERLAY_IP \
+                external_ids:ovn-encap-ip=$FIREWALL_OVERLAY_IP \
                 external_ids:ovn-encap-type=geneve
 fi
 
 # Re-start OVN controller
 #sudo /etc/init.d/ovn-host restart
-sudo /usr/share/openvswitch/scripts/ovn-ctl restart_controller
+sudo /usr/share/openvswitch/scripts/ovn-ctl  restart_controller
 
 # Set k8s API server IP
 sudo ovs-vsctl set Open_vSwitch . external_ids:k8s-api-server="$MASTER_OVERLAY_IP:8080"
@@ -126,10 +133,10 @@ pushd ovn-kubernetes
 sudo -H pip install .
 popd
 
-# Initialize the minion
-sudo ovn-k8s-overlay minion-init --cluster-ip-subnet="192.168.0.0/16" \
-                                 --minion-switch-subnet="$MINION_SUBNET" \
-                                 --node-name="$MINION_NAME"
+# Initialize the firewall
+sudo ovn-k8s-overlay firewall-init --cluster-ip-subnet="192.168.0.0/16" \
+                                 --firewall-switch-subnet="$FIREWALL_SUBNET" \
+                                 --node-name="$FIREWALL_NAME"
 
 # Create a OVS physical bridge and move IP address of enp0s9 to br-enp0s9
 echo "Creating physical bridge ..."
@@ -138,13 +145,13 @@ sudo ovs-vsctl add-port br-enp0s9 eth2
 sudo ip addr flush dev eth2
 #sudo ifconfig br-enp0s9 $PUBLIC_IP netmask $PUBLIC_SUBNET_MASK up
 sudo ip addr add $PUBLIC_IP/$CIDR dev br-enp0s9
-sudo ip link set br-enp0s9 up
+sudo ip link set  br-enp0s9 up
 
 # Start a gateway
 sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" \
                                  --bridge-interface br-enp0s9 \
                                  --physical-ip $PUBLIC_IP/$CIDR \
-                                 --node-name="$MINION_NAME" --default-gw $GW_IP
+                                 --node-name="$FIREWALL_NAME" --default-gw $GW_IP
 
 # Start the gateway helper.
 sudo ovn-k8s-gateway-helper --physical-bridge=br-enp0s9 \

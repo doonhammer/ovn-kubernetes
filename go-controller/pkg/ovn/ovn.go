@@ -14,7 +14,6 @@ type Controller struct {
 	Kube kube.Interface
 
 	StartPodWatch      func(handler cache.ResourceEventHandler)
-	StartServiceWatch  func(handler cache.ResourceEventHandler)
 	StartEndpointWatch func(handler cache.ResourceEventHandler)
 
 	gatewayCache map[string]string
@@ -29,7 +28,6 @@ const (
 func (oc *Controller) Run() {
 	oc.gatewayCache = make(map[string]string)
 	oc.WatchPods()
-	oc.WatchServices()
 	oc.WatchEndpoints()
 }
 
@@ -59,36 +57,6 @@ func (oc *Controller) WatchPods() {
 				}
 			}
 			oc.deleteLogicalPort(pod)
-			return
-		},
-	})
-}
-
-// WatchServices starts the watching of Service resource and calls back the
-// appropriate handler logic
-func (oc *Controller) WatchServices() {
-	oc.StartServiceWatch(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			return
-		},
-		UpdateFunc: func(old, new interface{}) {
-			return
-		},
-		DeleteFunc: func(obj interface{}) {
-			service, ok := obj.(*kapi.Service)
-			if !ok {
-				tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-				if !ok {
-					logrus.Errorf("couldn't get object from tombstone %+v", obj)
-					return
-				}
-				service, ok = tombstone.Obj.(*kapi.Service)
-				if !ok {
-					logrus.Errorf("tombstone contained object that is not a Service %#v", obj)
-					return
-				}
-			}
-			oc.deleteService(service)
 			return
 		},
 	})

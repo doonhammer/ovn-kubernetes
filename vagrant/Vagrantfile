@@ -7,13 +7,27 @@ require 'ipaddr'
 vagrant_config = YAML.load_file("provisioning/virtualbox.conf.yml")
 
 Vagrant.configure(2) do |config|
-  config.vm.box = "ubuntu/xenial64"
+  config.vm.box = "centos/7"
 
-  config.vm.synced_folder File.expand_path("k8s"), "/home/ubuntu/k8s"
+  #config.vm.synced_folder File.expand_path("k8s"), "/home/ubuntu/k8s", nfs: true
+  config.vm.synced_folder "./k8s", "/home/vagrant/k8s", type: "nfs"
 
   # Use the ipaddr library to calculate the netmask of a given network
+  class IPAddr
+    def cidr_mask
+      case (@family)
+      when Socket::AF_INET
+        32 - Math.log2((1<<32) - @mask_addr).to_i
+      when Socket::AF_INET6
+        128 - Math.log2((1<<128) - @mask_addr).to_i
+      else
+        raise AddressFamilyError, "unsupported address family"
+      end
+    end
+  end
   net = IPAddr.new vagrant_config['public_network']
   netmask = net.inspect().split("/")[1].split(">")[0]
+  cidr = net.cidr_mask
 
   # Bring up the Devstack ovsdb/ovn-northd node on Virtualbox
   config.vm.define "k8s-master" do |k8smaster|
@@ -23,21 +37,21 @@ Vagrant.configure(2) do |config|
     k8smaster.vm.provision "shell", path: "provisioning/setup-master.sh", privileged: false,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['public-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8smaster']['master-switch-subnet']}"
     k8smaster.vm.provision "shell", path: "provisioning/setup-k8s-master.sh", privileged: false,
-      :args => "#{vagrant_config['k8smaster']['public-ip']} #{netmask} #{vagrant_config['public_gateway']}"
+      :args => "#{vagrant_config['k8smaster']['public-ip']} #{netmask} #{vagrant_config['public_gateway']} #{cidr}"
     k8smaster.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']}"
-    k8smaster.vm.provider "virtualbox" do |vb|
-       vb.name = vagrant_config['k8smaster']['short_name']
+    k8smaster.vm.provider :libvirt do |vb|
+       #vb.name = vagrant_config['k8smaster']['short_name']
        vb.memory = 2048
        vb.cpus = 2
-       vb.customize [
-           'modifyvm', :id,
-           '--nicpromisc3', "allow-all"
-          ]
-       vb.customize [
-           "guestproperty", "set", :id,
-           "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000
-          ]
+       #vb.customize [
+       ##    'modifyvm', :id,
+       #   '--nicpromisc3', "allow-all"
+       #  ]
+       #vb.customize [
+       #    "guestproperty", "set", :id,
+       #    "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000
+       #   ]
     end
   end
 
@@ -47,23 +61,23 @@ Vagrant.configure(2) do |config|
     k8sminion1.vm.network "private_network", ip: vagrant_config['k8sminion1']['overlay-ip']
     k8sminion1.vm.network "private_network", ip: vagrant_config['k8sminion1']['public-ip'], netmask: netmask
     k8sminion1.vm.provision "shell", path: "provisioning/setup-minion.sh", privileged: false,
-      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['public-ip']} #{netmask} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion1']['minion-switch-subnet']} #{vagrant_config['public_gateway']}"
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['public-ip']} #{netmask} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion1']['minion-switch-subnet']} #{vagrant_config['public_gateway']} #{cidr}"
     k8sminion1.vm.provision "shell", path: "provisioning/setup-k8s-minion.sh", privileged: false,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']}"
     k8sminion1.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']}"
-    k8sminion1.vm.provider "virtualbox" do |vb|
-       vb.name = vagrant_config['k8sminion1']['short_name']
+    k8sminion1.vm.provider :libvirt do |vb|
+       #vb.name = vagrant_config['k8sminion1']['short_name']
        vb.memory = 2048
        vb.cpus = 2
-       vb.customize [
-           'modifyvm', :id,
-           '--nicpromisc3', "allow-all"
-          ]
-       vb.customize [
-           "guestproperty", "set", :id,
-           "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000
-          ]
+       #vb.customize [
+       #    'modifyvm', :id,
+       #    '--nicpromisc3', "allow-all"
+       #   ]
+       #vb.customize [
+       #    "guestproperty", "set", :id,
+       #    "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000
+       #   ]
     end
   end
 
@@ -73,29 +87,57 @@ Vagrant.configure(2) do |config|
     k8sminion2.vm.network "private_network", ip: vagrant_config['k8sminion2']['overlay-ip']
     k8sminion2.vm.network "private_network", ip: vagrant_config['k8sminion2']['public-ip'], netmask: netmask
     k8sminion2.vm.provision "shell", path: "provisioning/setup-minion.sh", privileged: false,
-      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['public-ip']} #{netmask} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8sminion2']['minion-switch-subnet']} #{vagrant_config['public_gateway']}"
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['public-ip']} #{netmask} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8sminion2']['minion-switch-subnet']} #{vagrant_config['public_gateway']} #{cidr}"
     k8sminion2.vm.provision "shell", path: "provisioning/setup-k8s-minion.sh", privileged: false,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']}"
     k8sminion2.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
-      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']}"
-    k8sminion2.vm.provider "virtualbox" do |vb|
-       vb.name = vagrant_config['k8sminion2']['short_name']
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']}"
+    k8sminion2.vm.provider :libvirt do |vb|
+       #vb.name = vagrant_config['k8sminion2']['short_name']
        vb.memory = 2048
        vb.cpus = 2
-       vb.customize [
-           'modifyvm', :id,
-           '--nicpromisc3', "allow-all"
-          ]
-       vb.customize [
-           "guestproperty", "set", :id,
-           "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000
-          ]
+       #vb.customize [
+       #    'modifyvm', :id,
+       #    '--nicpromisc3', "allow-all"
+       #   ]
+       #vb.customize [
+       #    "guestproperty", "set", :id,
+       #    "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000
+       #   ]
     end
   end
 
-  config.vm.provider "virtualbox" do |v|
-    v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
-    v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
-    v.customize ["modifyvm", :id, "--nictype1", "virtio"]
+  config.vm.define "k8s-firewall" do |k8sfirewall|
+    k8sfirewall.vm.host_name = vagrant_config['k8sfirewall']['host_name']
+    k8sfirewall.vm.host_name = "k8sfirewall"
+    k8sfirewall.vm.network "private_network", ip: vagrant_config['k8sfirewall']['overlay-ip']
+    k8sfirewall.vm.network "private_network", ip: vagrant_config['k8sfirewall']['public-ip'], netmask: netmask
+    k8sfirewall.vm.provision "shell", path: "provisioning/setup-firewall.sh", privileged: false,
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['public-ip']} #{netmask} #{vagrant_config['k8sfirewall']['short_name']} #{vagrant_config['k8sfirewall']['minion-switch-subnet']} #{vagrant_config['public_gateway']} #{cidr}"
+    k8sfirewall.vm.provision "shell", path: "provisioning/setup-k8s-firewall.sh", privileged: false,
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']}"
+    #k8sfirewall.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
+    #  :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
+    k8sfirewall.vm.provider :libvirt do |libvirt|
+        libvirt.nested = true
+        libvirt.cpu_mode = "host-model"
+        #libvirt.name = vagrant_config['k8sfirewall']['short_name']
+        libvirt.memory = 8192
+        libvirt.cpus = 4
+        #libvirt.customize [
+        #   'modifyvm', :id,
+        #   '--nicpromisc3', "allow-all"
+        #  ]
+        #libvirt.customize [
+        #   "guestproperty", "set", :id,
+        #   "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000
+        #  ]
+    end
   end
+
+  #config.vm.provider :libvirt do |v|
+  #  v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+  #  v.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+  #  v.customize ["modifyvm", :id, "--nictype1", "virtio"]
+  #end
 end

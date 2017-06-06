@@ -23,42 +23,57 @@ MASTER_SUBNET=$4
 EOL
 
 # Comment out the next line, if you prefer TCP instead of SSL.
-SSL="true"
+#SSL="false"
 
 # FIXME(mestery): Remove once Vagrant boxes allow apt-get to work again
-sudo rm -rf /var/lib/apt/lists/*
+#sudo rm -rf /var/lib/apt/lists/*
 
 # First, install docker
-sudo apt-get update
-sudo apt-get install -y apt-transport-https ca-certificates
-sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
-sudo su -c "echo \"deb https://apt.dockerproject.org/repo ubuntu-xenial main\" >> /etc/apt/sources.list.d/docker.list"
-sudo apt-get update
-sudo apt-get purge lxc-docker
-sudo apt-get install -y linux-image-extra-$(uname -r) linux-image-extra-virtual
-sudo apt-get install -y docker-engine
-sudo service docker start
+#sudo yum -y update
+sudo yum install -y apt-transport-https ca-certificates
+#sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+#sudo su -c "echo \"deb https://apt.dockerproject.org/repo ubuntu-xenial main\" >> /etc/apt/sources.list.d/docker.list"
+#sudo yum -y update
+#sudo yum remove lxc-docker
+#sudo yum install -y linux-image-extra-$(uname -r) linux-image-extra-virtual
+sudo yum-config-manager \
+    --add-repo \
+    https://download.docker.com/linux/centos/docker-ce.repo
+sudo yum install -y docker-ce
+sudo systemctl start docker
 
 # Install OVS and dependencies
-sudo apt-get build-dep dkms
-sudo apt-get install -y autoconf automake bzip2 debhelper dh-autoreconf \
-                        libssl-dev libtool openssl procps \
-                        python-six dkms
+#sudo apt-get build-dep dkms
+sudo yum install -y "kernel-devel-uname-r == $(uname -r)"
+sudo yum install -y autoconf automake bzip2 \
+                        libtool openssl openssl-devel procps \
+                        python-six git libcap-ng \
+                        libcap-ng-devel epel-release
+                      
 
-git clone https://github.com/openvswitch/ovs.git
+#git clone https://github.com/openvswitch/ovs.git
+git clone https://github.com/doonhammer/ovs.git
 pushd ovs/
-sudo DEB_BUILD_OPTIONS='nocheck parallel=2' fakeroot debian/rules binary
+git checkout "sfc.v30"
+git pull origin "sfc.v30"
+./boot.sh
+./configure --with-linux=/lib/modules/$(uname -r)/build --prefix=/usr --localstatedir=/var --sysconfdir=/etc
+make
+sudo make install
+sudo make modules_install
+#sudo DEB_BUILD_OPTIONS='nocheck parallel=2' fakeroot debian/rules binary
 
 # Install OVS/OVN debs
-popd
-sudo dpkg -i openvswitch-datapath-dkms*.deb
-sudo dpkg -i openvswitch-switch*.deb openvswitch-common*.deb \
-             ovn-central*.deb ovn-common*.deb \
-             python-openvswitch*.deb ovn-docker*.deb \
-             ovn-host*.deb
+#popd
+#sudo dpkg -i openvswitch-datapath-dkms*.deb
+#sudo dpkg -i openvswitch-switch*.deb openvswitch-common*.deb \
+##             ovn-central*.deb ovn-common*.deb \
+#            python-openvswitch*.deb ovn-docker*.deb \
+#             ovn-host*.deb
 
 # Start the daemons
-sudo /etc/init.d/openvswitch-switch force-reload-kmod
+#sudo /etc/init.d/openvswitch-switch force-reload-kmod
+sudo /usr/share/openvswitch/scripts/ovs-ctl start --system-id=random
 sudo /usr/share/openvswitch/scripts/ovn-ctl stop_northd
 sudo /usr/share/openvswitch/scripts/ovn-ctl start_northd
 
@@ -103,13 +118,14 @@ else
 fi
 
 # Re-start OVN controller
-sudo /etc/init.d/ovn-host restart
+#sudo /etc/init.d/ovn-host restart
+sudo /usr/share/openvswitch/scripts/ovn-ctl  restart_controller
 
 # Set k8s API server IP
 sudo ovs-vsctl set Open_vSwitch . external_ids:k8s-api-server="0.0.0.0:8080"
 
 # Install OVN+K8S Integration
-sudo apt-get install -y python-pip
+sudo yum install -y python-pip
 sudo -H pip install --upgrade pip
 git clone https://github.com/openvswitch/ovn-kubernetes
 pushd ovn-kubernetes
@@ -120,6 +136,7 @@ popd
 sudo ovn-k8s-overlay master-init --cluster-ip-subnet="192.168.0.0/16" \
                                  --master-switch-subnet="$MASTER_SUBNET" \
                                  --node-name="$MASTER_NAME"
+
 
 # Restore xtrace
 $XTRACE

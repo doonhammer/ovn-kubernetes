@@ -234,15 +234,15 @@ class OvnNB(object):
                                             "external_ids:gateway_ip"
                                             ).strip('"')
             except Exception as e:
-                vlog.err("_get_switch_gateway_ip: failed to get gateway_ip %s"
-                         % (str(e)))
+                vlog.err("_get_switch_gateway_ip: failed to get gateway_ip %s,for switch %s"
+                         % (str(e), logical_switch))
                 return (None, None)
 
         try:
             (gateway_ip, mask) = gateway_ip_mask.split('/')
         except Exception as e:
-            vlog.err("_get_switch_gateway_ip: failed to split ip/mask %s"
-                     % (gateway_ip_mask))
+            vlog.err("_get_switch_gateway_ip: failed to split ip/mask %s, for logical switch %s"
+                     % (gateway_ip_mask, logical_switch))
             return (None, None)
 
         if not cached_logical_switch:
@@ -301,7 +301,8 @@ class OvnNB(object):
 
         (gateway_ip, mask) = self._get_switch_gateway_ip(logical_switch)
         if not gateway_ip or not mask:
-            vlog.err("_create_logical_port: failed to get gateway_ip")
+            vlog.err("_create_logical_port: failed to get gateway_ip for logical switch: %s and pod %s",
+                (logical_switch,pod_name))
             return
 
         try:
