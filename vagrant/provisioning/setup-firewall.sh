@@ -128,7 +128,8 @@ sudo ovs-vsctl set Open_vSwitch . external_ids:k8s-api-server="$MASTER_OVERLAY_I
 # Install OVN+K8S Integration
 sudo yum install -y python-pip
 sudo -H pip install --upgrade pip
-git clone https://github.com/openvswitch/ovn-kubernetes
+#git clone https://github.com/openvswitch/ovn-kubernetes
+git clone https://github.com/doonhammer/ovn-kubernetes
 pushd ovn-kubernetes
 sudo -H pip install .
 popd
@@ -150,7 +151,7 @@ sudo ip link set  br-enp0s9 up
 # Start a gateway
 sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" \
                                  --bridge-interface br-enp0s9 \
-                                 --physical-ip $PUBLIC_IP/$CIDR \
+                                 --physical-ip $PUBLIC_IP/$PUBLIC_SUBNET_MASK \
                                  --node-name="$FIREWALL_NAME" --default-gw $GW_IP
 
 # Start the gateway helper.

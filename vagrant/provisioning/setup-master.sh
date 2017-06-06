@@ -127,7 +127,8 @@ sudo ovs-vsctl set Open_vSwitch . external_ids:k8s-api-server="0.0.0.0:8080"
 # Install OVN+K8S Integration
 sudo yum install -y python-pip
 sudo -H pip install --upgrade pip
-git clone https://github.com/openvswitch/ovn-kubernetes
+#git clone https://github.com/openvswitch/ovn-kubernetes
+git clone https://github.com/doonhammer/ovn-kubernetes
 pushd ovn-kubernetes
 sudo -H pip install .
 popd
