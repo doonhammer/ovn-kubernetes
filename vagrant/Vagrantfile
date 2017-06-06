@@ -39,7 +39,7 @@ Vagrant.configure(2) do |config|
     k8smaster.vm.provision "shell", path: "provisioning/setup-k8s-master.sh", privileged: false,
       :args => "#{vagrant_config['k8smaster']['public-ip']} #{netmask} #{vagrant_config['public_gateway']} #{cidr}"
     k8smaster.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
-      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']}"
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']}  #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
     k8smaster.vm.provider :libvirt do |vb|
        #vb.name = vagrant_config['k8smaster']['short_name']
        vb.memory = 2048
@@ -65,7 +65,7 @@ Vagrant.configure(2) do |config|
     k8sminion1.vm.provision "shell", path: "provisioning/setup-k8s-minion.sh", privileged: false,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']}"
     k8sminion1.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
-      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']}"
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']}  #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
     k8sminion1.vm.provider :libvirt do |vb|
        #vb.name = vagrant_config['k8sminion1']['short_name']
        vb.memory = 2048
@@ -91,7 +91,7 @@ Vagrant.configure(2) do |config|
     k8sminion2.vm.provision "shell", path: "provisioning/setup-k8s-minion.sh", privileged: false,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']}"
     k8sminion2.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
-      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']}"
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
     k8sminion2.vm.provider :libvirt do |vb|
        #vb.name = vagrant_config['k8sminion2']['short_name']
        vb.memory = 2048
@@ -116,8 +116,8 @@ Vagrant.configure(2) do |config|
       :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['public-ip']} #{netmask} #{vagrant_config['k8sfirewall']['short_name']} #{vagrant_config['k8sfirewall']['minion-switch-subnet']} #{vagrant_config['public_gateway']} #{cidr}"
     k8sfirewall.vm.provision "shell", path: "provisioning/setup-k8s-firewall.sh", privileged: false,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']}"
-    #k8sfirewall.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
-    #  :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
+    k8sfirewall.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
+      :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
     k8sfirewall.vm.provider :libvirt do |libvirt|
         libvirt.nested = true
         libvirt.cpu_mode = "host-model"
