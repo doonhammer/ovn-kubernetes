@@ -56,7 +56,7 @@ sudo ip link set  br-enp0s9 up
 
 # Setup the GW node on the master
 sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" --bridge-interface br-enp0s9 \
-                                  --physical-ip $PUBLIC_IP/$PUBLIC_SUBNET_MASK \
+                                  --physical-ip $PUBLIC_IP/$CIDR \
                                   --node-name="kube-gateway-node1" --default-gw $GW_IP
 
 # Start the gateway helper.

@@ -136,9 +136,9 @@ sudo -H pip install .
 popd
 
 # Initialize the firewall
-sudo ovn-k8s-overlay firewall-init --cluster-ip-subnet="192.168.0.0/16" \
-                                 --firewall-switch-subnet="$FIREWALL_SUBNET" \
-                                 --node-name="$FIREWALL_NAME"
+#sudo ovn-k8s-overlay firewall-init --cluster-ip-subnet="192.168.0.0/16" \
+#                                 --firewall-switch-subnet="$FIREWALL_SUBNET" \
+#                                 --node-name="$FIREWALL_NAME"
 
 # Create a OVS physical bridge and move IP address of enp0s9 to br-enp0s9
 echo "Creating physical bridge ..."
@@ -150,10 +150,10 @@ sudo ip addr add $PUBLIC_IP/$CIDR dev br-enp0s9
 sudo ip link set  br-enp0s9 up
 
 # Start a gateway
-sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" \
-                                 --bridge-interface br-enp0s9 \
-                                 --physical-ip $PUBLIC_IP/$PUBLIC_SUBNET_MASK \
-                                 --node-name="$FIREWALL_NAME" --default-gw $GW_IP
+#sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" \
+#                                 --bridge-interface br-enp0s9 \
+#                                 --physical-ip $PUBLIC_IP/$CIDR \
+#                                 --node-name="$FIREWALL_NAME" --default-gw $GW_IP
 
 # Start the gateway helper.
 sudo ovn-k8s-gateway-helper --physical-bridge=br-enp0s9 \
