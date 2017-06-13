@@ -156,8 +156,8 @@ sudo ip link set  br-enp0s9 up
 #                                 --node-name="$FIREWALL_NAME" --default-gw $GW_IP
 
 # Start the gateway helper.
-sudo ovn-k8s-gateway-helper --physical-bridge=br-enp0s9 \
-            --physical-interface=eth2 --pidfile --detach
+#sudo ovn-k8s-gateway-helper --physical-bridge=br-enp0s9 \
+#            --physical-interface=eth2 --pidfile --detach
 
 
 # Restore xtrace
