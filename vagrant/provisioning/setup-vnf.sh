@@ -6,27 +6,27 @@ set -o xtrace
 
 # ARGS:
 # $1: IP of second interface of master
-# $2: IP of second interface of minion
+# $2: IP of second interface of vnf
 # $3: IP of third interface of master
-# $4: Hostname of specific minion
+# $4: Hostname of specific vnf
 # $5: Subnet to use
 
 MASTER_OVERLAY_IP=$1
-MINION_OVERLAY_IP=$2
+VNF_OVERLAY_IP=$2
 PUBLIC_IP=$3
 PUBLIC_SUBNET_MASK=$4
-MINION_NAME=$5
-MINION_SUBNET=$6
+VNF_NAME=$5
+VNF_SUBNET=$6
 GW_IP=$7
 CIDR=$8
 
-cat > setup_minion_args.sh <<EOL
+cat > setup_vnf_args.sh <<EOL
 MASTER_OVERLAY_IP=$1
-MINION_OVERLAY_IP=$2
+VNF_OVERLAY_IP=$2
 PUBLIC_IP=$3
 PUBLIC_SUBNET_MASK=$4
-MINION_NAME=$5
-MINION_SUBNET=$6
+VNF_NAME=$5
+VNF_SUBNET=$6
 GW_IP=$7
 CIDR=$8
 EOL
@@ -62,33 +62,7 @@ sudo yum install -y autoconf automake bzip2 wget \
                         libtool openssl openssl-devel procps \
                         python-six git libcap-ng \
                         libcap-ng-devel epel-release
-#
-# Install Sample VNF
-#
-#git clone https://github.com/doonhammer/sample_vnf.git
-#pushd sample_vnf
-#mkdir obj
-#mkdir bin
-#make
-#
-# Create Container
-#
-#sudo touch Dockerfile
-#sudo chmod 666 Dockerfile
-#sudo chmod 777 bin/vnf
-#
-#sudo cat > Dockerfile <<EOL
-#FROM centos
-#MAINTAINER John McDowall <jmcdowall@paloaltonetworks.com>
-#COPY bin/vnf /usr/bin/vnf
-#CMD vnf -f eth0
-#EOL
-#
-#sudo docker build -t centos:vnf .
-#
 
-
-popd
 #git clone https://github.com/openvswitch/ovs.git
 git clone https://github.com/doonhammer/ovs.git
 pushd ovs/
@@ -123,7 +97,7 @@ if [ -n "$SSL" ]; then
     sudo ovs-vsctl set Open_vSwitch . \
                 external_ids:ovn-remote="ssl:$MASTER_OVERLAY_IP:6642" \
                 external_ids:ovn-nb="ssl:$MASTER_OVERLAY_IP:6641" \
-                external_ids:ovn-encap-ip=$MINION_OVERLAY_IP \
+                external_ids:ovn-encap-ip=$VNF_OVERLAY_IP \
                 external_ids:ovn-encap-type=geneve
 
     # Set ovn-controller SSL options in /etc/default/ovn-host
@@ -135,7 +109,7 @@ else
     sudo ovs-vsctl set Open_vSwitch . \
                 external_ids:ovn-remote="tcp:$MASTER_OVERLAY_IP:6642" \
                 external_ids:ovn-nb="tcp:$MASTER_OVERLAY_IP:6641" \
-                external_ids:ovn-encap-ip=$MINION_OVERLAY_IP \
+                external_ids:ovn-encap-ip=$VNF_OVERLAY_IP \
                 external_ids:ovn-encap-type=geneve
 fi
 
@@ -155,10 +129,10 @@ pushd ovn-kubernetes
 sudo -H pip install .
 popd
 
-# Initialize the minion
+# Initialize the vnf
 sudo ovn-k8s-overlay minion-init --cluster-ip-subnet="192.168.0.0/16" \
-                                 --minion-switch-subnet="$MINION_SUBNET" \
-                                 --node-name="$MINION_NAME"
+                                 --minion-switch-subnet="$VNF_SUBNET" \
+                                 --node-name="$VNF_NAME"
 
 # Create a OVS physical bridge and move IP address of enp0s9 to br-enp0s9
 echo "Creating physical bridge ..."
@@ -173,7 +147,7 @@ sudo ip link set br-enp0s9 up
 sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" \
                                  --bridge-interface br-enp0s9 \
                                  --physical-ip $PUBLIC_IP/$CIDR \
-                                 --node-name="$MINION_NAME" --default-gw $GW_IP
+                                 --node-name="$VNF_NAME" --default-gw $GW_IP
 
 # Start the gateway helper.
 sudo ovn-k8s-gateway-helper --physical-bridge=br-enp0s9 \

@@ -31,6 +31,7 @@ sudo docker run --net=host -d gcr.io/google_containers/etcd:2.0.12 /usr/local/bi
 pushd k8s/server/kubernetes/server/bin
 echo "Starting kube-apiserver ..."
 nohup sudo ./kube-apiserver --service-cluster-ip-range=192.168.200.0/24 \
+                            --runtime-config=extensions/v1beta1 \
                             --address=0.0.0.0 --etcd-servers=http://127.0.0.1:4001 \
                             --v=2 2>&1 0<&- &>/dev/null &
 sleep 5
@@ -129,5 +130,47 @@ spec:
   type: NodePort
 APACHENS
 
+cat << FIREWALLNS >> ~/firewall-ds.yaml
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: firewall
+  namespace: kube-system
+  labels:
+    vnfType: firewall
+spec:
+  template:
+    metadata:
+      labels:
+        name: firewall
+    spec:
+      containers:
+      - name: firewall
+        image: doonhammer/centos:vnf
+        imagePullPolicy: Always
+        securityContext:
+          capabilities:
+            add: ["ALL"]
+        resources:
+          limits:
+            memory: 500Mi
+          requests:
+            cpu: 1000m
+            memory: 500Mi
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+FIREWALLNS
 # Restore xtrace
 $XTRACE
