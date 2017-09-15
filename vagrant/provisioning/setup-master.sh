@@ -36,6 +36,14 @@ sudo yum install -y apt-transport-https ca-certificates
 #sudo yum -y update
 #sudo yum remove lxc-docker
 #sudo yum install -y linux-image-extra-$(uname -r) linux-image-extra-virtual
+cat << DAEMONNS >> ~/daemon.json
+{
+  "insecure-registries" : ["docker-panos.af.paloaltonetworks.local"]
+}
+DAEMONNS
+#
+sudo cp ~/daemon.json /etc/docker/
+#
 sudo yum-config-manager \
     --add-repo \
     https://download.docker.com/linux/centos/docker-ce.repo

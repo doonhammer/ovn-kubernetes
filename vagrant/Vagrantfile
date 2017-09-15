@@ -8,6 +8,7 @@ vagrant_config = YAML.load_file("provisioning/virtualbox.conf.yml")
 
 Vagrant.configure(2) do |config|
   config.vm.box = "centos/7"
+  config.vm.box_version = "1708.01"
 
   #config.vm.synced_folder File.expand_path("k8s"), "/home/ubuntu/k8s", nfs: true
   config.vm.synced_folder "./k8s", "/home/vagrant/k8s", type: "nfs"
@@ -42,8 +43,8 @@ Vagrant.configure(2) do |config|
       :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8svnf']['overlay-ip']} #{vagrant_config['k8svnf']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
     k8smaster.vm.provider "virtualbox" do |vb|
        vb.name = vagrant_config['k8smaster']['short_name']
-       vb.memory = 2048
-       vb.cpus = 2
+       vb.memory = vagrant_config['k8smaster']['memory']
+       vb.cpus = vagrant_config['k8smaster']['cpus']
        #vb.customize [
        ##    'modifyvm', :id,
        #   '--nicpromisc3', "allow-all"
@@ -67,9 +68,9 @@ Vagrant.configure(2) do |config|
     k8sminion1.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8svnf']['overlay-ip']} #{vagrant_config['k8svnf']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
     k8sminion1.vm.provider "virtualbox" do |vb|
-       #vb.name = vagrant_config['k8sminion1']['short_name']
-       vb.memory = 2048
-       vb.cpus = 2
+       vb.name = vagrant_config['k8sminion1']['short_name']
+       vb.memory = vagrant_config['k8sminion1']['memory']
+       vb.cpus = vagrant_config['k8sminion1']['cpus']
        #vb.customize [
        #    'modifyvm', :id,
        #    '--nicpromisc3', "allow-all"
@@ -93,9 +94,9 @@ Vagrant.configure(2) do |config|
     k8sminion2.vm.provision "shell", path: "provisioning/setup-hostnames.sh", privileged: true,
       :args => "#{vagrant_config['k8smaster']['overlay-ip']} #{vagrant_config['k8smaster']['short_name']} #{vagrant_config['k8sminion2']['overlay-ip']} #{vagrant_config['k8sminion2']['short_name']} #{vagrant_config['k8sminion1']['overlay-ip']} #{vagrant_config['k8sminion1']['short_name']} #{vagrant_config['k8svnf']['overlay-ip']} #{vagrant_config['k8svnf']['short_name']} #{vagrant_config['k8sfirewall']['overlay-ip']} #{vagrant_config['k8sfirewall']['short_name']}"
     k8sminion2.vm.provider "virtualbox" do |vb|
-       #vb.name = vagrant_config['k8sminion2']['short_name']
-       vb.memory = 2048
-       vb.cpus = 2
+       vb.name = vagrant_config['k8sminion2']['short_name']
+       vb.memory = vagrant_config['k8sminion2']['memory']
+       vb.cpus = vagrant_config['k8sminion2']['cpus']
        #vb.customize [
        #    'modifyvm', :id,
        #    '--nicpromisc3', "allow-all"

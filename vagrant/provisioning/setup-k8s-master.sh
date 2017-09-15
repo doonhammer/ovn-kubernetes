@@ -130,11 +130,12 @@ spec:
   type: NodePort
 APACHENS
 
+
 cat << FIREWALLNS >> ~/firewall-ds.yaml
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
-  name: firewall
+  name: firewall-vnf
   namespace: kube-system
   labels:
     vnfType: firewall
@@ -146,28 +147,40 @@ spec:
     spec:
       containers:
       - name: firewall
-        image: doonhammer/centos:vnf
+        image: docker-panos.af.paloaltonetworks.local/centosvnf:local
         imagePullPolicy: Always
+        command: ["/bin/sh"]
+        args: ["-c", "addshm -m 2084; vnf -f eth0"]
         securityContext:
           capabilities:
             add: ["ALL"]
         resources:
           limits:
-            memory: 500Mi
+            memory: 4000Mi
           requests:
             cpu: 1000m
-            memory: 500Mi
+            memory: 4000Mi
         volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
         - name: varlog
-          mountPath: /var/log
+          mountPath: /var/log/vnf
+        - name: varrun
+          mountPath: /var/run/vnf
         - name: varlibdockercontainers
           mountPath: /var/lib/docker/containers
           readOnly: true
       terminationGracePeriodSeconds: 30
       volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
       - name: varlog
         hostPath:
-          path: /var/log
+          path: /var/log/vnf
+      - name: varrun
+        hostPath:
+          path: /var/run/vnf
       - name: varlibdockercontainers
         hostPath:
           path: /var/lib/docker/containers
