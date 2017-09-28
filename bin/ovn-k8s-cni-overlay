@@ -32,7 +32,7 @@ from ovn_k8s.common.util import call_popen
 vlog = ovs.vlog.Vlog("ovn-k8s-cni-overlay")
 
 LOGFILE = config.get_option('log_path')
-CNI_VERSION = "0.1.0"
+CNI_VERSION = "0.3.1"
 DEBUG = True
 
 
