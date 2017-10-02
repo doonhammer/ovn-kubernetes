@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#!/usr/bin/python2
 # Copyright (C) 2016 Nicira, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,8 +65,8 @@ def setup_interface(container_id, cni_netns, cni_ifname,
     try:
         ipdb = pyroute2.IPDB(mode='explicit')
         vlog.dbg("Creating veth pair for container %s" % container_id)
-        veth_outside = container_id[:15]
-        veth_inside = container_id[:13] + "_c"
+        veth_outside = container_id[:11] + cni_ifname
+        veth_inside = container_id[:9] + cni_ifname + "_c"
         ipdb.create(ifname=veth_outside, kind='veth', peer=veth_inside)
         with ipdb.interfaces[veth_outside] as veth_outside_iface:
             # Up the outer interface
@@ -98,10 +98,12 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         ns_ipdb = pyroute2.IPDB(nl=pyroute2.NetNS(container_id),
                                 mode='explicit')
         # Configure veth_inside: set name, mtu, mac address, ip, and bring up
-        vlog.dbg("Configuring and bringing up veth inner interface %s. "
+        vlog.dbg("Configuring and bringing up veth inner interface: %s "
                  "New name:'%s',MAC address:'%s', MTU:'%s', IP:%s" %
                  (veth_inside, cni_ifname, mac_address,
                   config.get_option('mtu'), ip_address))
+        vlog.dbg("Outside veth: %s" % veth_outside_iface)
+	vlog.dbg("Inside Interface: %s" % ns_ipdb.interfaces[veth_inside])
         with ns_ipdb.interfaces[veth_inside] as veth_inside_iface:
             veth_inside_iface.ifname = cni_ifname
             veth_inside_iface.address = mac_address
@@ -112,7 +114,7 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         # Set the gateway
         vlog.dbg("Setting gateway_ip %s for container:%s"
                  % (gateway_ip, container_id))
-        ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
+        #ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
 
         return veth_outside
     except Exception as e:
@@ -154,21 +156,56 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
         raise OVNCNIException(100, "failed to get pod annotation")
 
     try:
+        sfc_annotated_dict = ast.literal_eval(annotation['sfc'])
+        sfc_interface = sfc_annotated_dict['interface']
+        vlog.dbg("SFC Data Interface: %s" % sfc_interface)
+    except Exception as e:
+        raise OVNCNIException(100, "failed in sfc annotation key extract")
+
+    try:
         ovn_annotated_dict = ast.literal_eval(annotation['ovn'])
         ip_address = ovn_annotated_dict['ip_address']
         mac_address = ovn_annotated_dict['mac_address']
         gateway_ip = ovn_annotated_dict['gateway_ip']
     except Exception as e:
-        raise OVNCNIException(100, "failed in pod annotation key extract")
+        raise OVNCNIException(100, "failed in ovn annotation key extract")
+    #
+    # Create a new interface for management traffic - not visible to K8S
+    #
+    vlog.dbg("cni_ifname: %s" % cni_ifname)
+    m_ip_address =  "192.168.2.4/24"
+    m_mac_address = "0a:0a:00:00:00:0e"
+    veth_management = setup_interface(container_id, cni_netns, sfc_interface,
+                                   m_mac_address, m_ip_address,
+                                   gateway_ip)
 
+    m_iface_id = "%s_%s" % (namespace, pod_name)
+
+    try:
+        ovs_vsctl('add-port', 'br-int', veth_management, '--', 'set',
+                  'interface', veth_management,
+                  'external_ids:attached_mac=%s' % m_mac_address,
+                  'external_ids:m-iface-id=%s' % m_iface_id,
+                  'external_ids:ip_address=%s' % m_ip_address)
+    except Exception:
+        vlog.err("Unable to plug management interface into OVN bridge")
+        raise OVNCNIException(106, "failure in plugging pod management interface")
+
+    m_output = json.dumps({'ip_address': m_ip_address,
+                        'gateway_ip': gateway_ip, 'mac_address': m_mac_address})
+    vlog.dbg("Management output is %s" % m_output)
+
+    #
+    #  End of create management
+    #
     veth_outside = setup_interface(container_id, cni_netns, cni_ifname,
                                    mac_address, ip_address,
                                    gateway_ip)
-
+    
     iface_id = "%s_%s" % (namespace, pod_name)
-
+    
     try:
-        ovs_vsctl('add-port', 'br-int', veth_outside, '--', 'set',
+         ovs_vsctl('add-port', 'br-int', veth_outside, '--', 'set',
                   'interface', veth_outside,
                   'external_ids:attached_mac=%s' % mac_address,
                   'external_ids:iface-id=%s' % iface_id,
@@ -176,11 +213,11 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     except Exception:
         vlog.err("Unable to plug interface into OVN bridge")
         raise OVNCNIException(106, "failure in plugging pod interface")
-
+    
     output = json.dumps({'ip_address': ip_address,
                         'gateway_ip': gateway_ip, 'mac_address': mac_address})
     vlog.dbg("output is %s" % output)
-    print(output)
+    print(m_output)
 
 
 def cni_del(container_id):
