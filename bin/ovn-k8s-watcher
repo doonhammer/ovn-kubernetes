@@ -75,7 +75,7 @@ def main():
     ovs.daemon.handle_args(args)
 
     ovn_init_k8s(args)
-
+    vlog.dbg("Enabled debug")
     ovs.daemon.daemonize()
 
     watcher.start_threads()
