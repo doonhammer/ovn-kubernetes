@@ -63,10 +63,12 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         raise OVNCNIException(100, "failure in creation of netns directory")
 
     try:
-        ipdb = pyroute2.IPDB(mode='explicit')
+        ipdb = pyroute2.IPDB(mode='implicit')
         vlog.dbg("Creating veth pair for container %s" % container_id)
         veth_outside = container_id[:11] + cni_ifname
         veth_inside = container_id[:9] + cni_ifname + "_c"
+        #veth_outside = container_id[:15]
+        #veth_inside = container_id[:13] + "_c"
         ipdb.create(ifname=veth_outside, kind='veth', peer=veth_inside)
         with ipdb.interfaces[veth_outside] as veth_outside_iface:
             # Up the outer interface
@@ -88,15 +90,16 @@ def setup_interface(container_id, cni_netns, cni_ifname,
             vlog.dbg("Adding veth inner interface to namespace for "
                      "container %s" % container_id)
             veth_inside_iface.net_ns_fd = container_id
-
+        ipdb.release()
     except Exception as e:
         vlog.warn("failed to create veth pairs")
+	ipdb.release()
         raise OVNCNIException(100, "veth pair setup failure")
 
     try:
         # Change the name of veth_inside to $cni_ifname
         ns_ipdb = pyroute2.IPDB(nl=pyroute2.NetNS(container_id),
-                                mode='explicit')
+                                mode='implicit')
         # Configure veth_inside: set name, mtu, mac address, ip, and bring up
         vlog.dbg("Configuring and bringing up veth inner interface: %s "
                  "New name:'%s',MAC address:'%s', MTU:'%s', IP:%s" %
@@ -115,12 +118,13 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         vlog.dbg("Setting gateway_ip %s for container:%s"
                  % (gateway_ip, container_id))
         #ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
-
+        ns_ipdb.release()
         return veth_outside
     except Exception as e:
         vlog.warn("Failed to setup veth pair for pod: %s" % str(e))
         if veth_outside_idx:
             pyroute2.IPRoute().link('del', index=veth_outside_idx)
+	ns_ipdb.release()
         raise OVNCNIException(100, "container interface setup failure")
 
 
@@ -155,12 +159,12 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     if not annotation:
         raise OVNCNIException(100, "failed to get pod annotation")
 
-    try:
-        sfc_annotated_dict = ast.literal_eval(annotation['sfc'])
-        sfc_interface = sfc_annotated_dict['interface']
-        vlog.dbg("SFC Data Interface: %s" % sfc_interface)
-    except Exception as e:
-        raise OVNCNIException(100, "failed in sfc annotation key extract")
+    #try:
+    #    sfc_annotated_dict = ast.literal_eval(annotation['sfc'])
+    #    sfc_interface = sfc_annotated_dict['interface']
+    #    vlog.dbg("SFC Data Interface: %s" % sfc_interface)
+    #except Exception as e:
+    #    raise OVNCNIException(100, "failed in sfc annotation key extract")
 
     try:
         ovn_annotated_dict = ast.literal_eval(annotation['ovn'])
@@ -172,29 +176,29 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     #
     # Create a new interface for management traffic - not visible to K8S
     #
-    vlog.dbg("cni_ifname: %s" % cni_ifname)
-    m_ip_address =  "192.168.2.4/24"
-    m_mac_address = "0a:0a:00:00:00:0e"
-    veth_management = setup_interface(container_id, cni_netns, sfc_interface,
-                                   m_mac_address, m_ip_address,
-                                   gateway_ip)
-
-    m_iface_id = "%s_%s" % (namespace, pod_name)
-
-    try:
-        ovs_vsctl('add-port', 'br-int', veth_management, '--', 'set',
-                  'interface', veth_management,
-                  'external_ids:attached_mac=%s' % m_mac_address,
-                  'external_ids:m-iface-id=%s' % m_iface_id,
-                  'external_ids:ip_address=%s' % m_ip_address)
-    except Exception:
-        vlog.err("Unable to plug management interface into OVN bridge")
-        raise OVNCNIException(106, "failure in plugging pod management interface")
-
-    m_output = json.dumps({'ip_address': m_ip_address,
-                        'gateway_ip': gateway_ip, 'mac_address': m_mac_address})
-    vlog.dbg("Management output is %s" % m_output)
-
+    #vlog.dbg("cni_ifname: %s" % cni_ifname)
+    #m_ip_address =  "192.168.2.4/24"
+    #m_mac_address = "0a:0a:00:00:00:0e"
+    #veth_management = setup_interface(container_id, cni_netns, sfc_interface,
+    #                               m_mac_address, m_ip_address,
+    #                               gateway_ip)
+    #
+    #m_iface_id = "%s_%s" % (namespace, pod_name)
+    #
+    #try:
+    #    ovs_vsctl('add-port', 'br-int', veth_management, '--', 'set',
+    #              'interface', veth_management,
+    #              'external_ids:attached_mac=%s' % m_mac_address,
+    #              'external_ids:m-iface-id=%s' % m_iface_id,
+    #              'external_ids:ip_address=%s' % m_ip_address)
+    #except Exception:
+    #    vlog.err("Unable to plug management interface into OVN bridge")
+    #    raise OVNCNIException(106, "failure in plugging pod management interface")
+    #
+    #m_output = json.dumps({'ip_address': m_ip_address,
+    #                    'gateway_ip': gateway_ip, 'mac_address': m_mac_address})
+    #vlog.dbg("Management output is %s" % m_output)
+    #
     #
     #  End of create management
     #
@@ -217,14 +221,17 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     output = json.dumps({'ip_address': ip_address,
                         'gateway_ip': gateway_ip, 'mac_address': mac_address})
     vlog.dbg("output is %s" % output)
-    print(m_output)
+    print(output)
 
 
-def cni_del(container_id):
+def cni_del(cni_ifname, container_id):
+    vlog.dbg("DEL: ifname: %s" % cni_ifname)
     try:
-        ovs_vsctl("del-port", container_id[:15])
+        #ovs_vsctl("del-port", container_id[:15])
+        ovs_vsctl("del-port", container_id[:11] + cni_ifname)
     except Exception:
-        message = "failed to delete OVS port %s" % container_id[:15]
+        #message = "failed to delete OVS port %s" % container_id[:15]
+        message = "failed to delete OVS port %s" % container_id[:11] + cni_ifname
         vlog.err(message)
 
     command = "rm -f /var/run/netns/%s" % container_id
@@ -232,6 +239,7 @@ def cni_del(container_id):
 
 
 def main():
+    
     parser = argparse.ArgumentParser()
     ovs.vlog.add_args(parser)
 
@@ -240,13 +248,18 @@ def main():
     else:
         args = parser.parse_args(['--log-file', LOGFILE])
     ovs.vlog.handle_args(args)
-
+   
+    for line in sys.stdin:
+    	vlog.dbg("Stdin: %s" % line)
+	cni_conf = json.loads(line)
+    vlog.dbg("JSON CNI: %s" % cni_conf)   
     try:
         cni_command = os.environ['CNI_COMMAND']
         cni_ifname = os.environ['CNI_IFNAME']
         cni_netns = os.environ['CNI_NETNS']
         cni_args = os.environ['CNI_ARGS']
-
+    
+        vlog.dbg("CNI_ARGS: %s" % cni_args)
         cni_args_dict = dict(i.split("=") for i in cni_args.split(";"))
         namespace = cni_args_dict['K8S_POD_NAMESPACE']
         pod_name = cni_args_dict['K8S_POD_NAME']
@@ -266,7 +279,7 @@ def main():
     if cni_command == "ADD":
         cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id)
     elif cni_command == "DEL":
-        cni_del(container_id)
+        cni_del(cni_ifname,container_id)
 
 
 if __name__ == '__main__':
