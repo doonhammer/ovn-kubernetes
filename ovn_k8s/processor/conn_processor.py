@@ -22,10 +22,10 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
 
     def _process_pod_event(self, event):
         if event.event_type == "DELETED":
-            vlog.dbg("Received a pod delete event %s" % (event.metadata))
+            vlog.info("Received a pod delete event %s" % (event.metadata))
             self.mode.delete_logical_port(event)
         else:
-            vlog.dbg("Received a pod ADD/MODIFY event %s" % (event.metadata))
+            vlog.info("Received a pod ADD/MODIFY event %s" % (event.metadata))
             self.mode.create_logical_port(event)
 
     def _process_service_event(self, event):
