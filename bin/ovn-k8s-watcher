@@ -28,8 +28,6 @@ from ovn_k8s.watcher import watcher
 eventlet.monkey_patch()
 
 vlog = ovs.vlog.Vlog("ovn-k8s-watcher")
-LOGFILE ="/var/log/openvswitch/ovn-k8s-watcher.log"
-DEBUG = True 
 
 def ovn_init_k8s(args):
     if args.overlay:
@@ -46,15 +44,7 @@ def ovn_init_k8s(args):
 def main():
     parser = argparse.ArgumentParser()
 
-
     ovs.vlog.add_args(parser)
-
-    if DEBUG:
-        args = parser.parse_args(['--log-file', LOGFILE, '-vfile:dbg'])
-    else:
-        args = parser.parse_args(['--log-file', LOGFILE])
-    ovs.vlog.handle_args(args)
-
 
     # For the same k8s setup, networking in OVN can happen in
     # different ways.
