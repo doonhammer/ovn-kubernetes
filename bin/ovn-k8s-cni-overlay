@@ -54,7 +54,7 @@ class OVNCNIException(Exception):
 
 
 def setup_interface(container_id, cni_netns, cni_ifname,
-                    mac_address, ip_address, gateway_ip):
+                    mac_address, ip_address, gateway_ip,master_plugin):
     try:
         if not os.path.exists("/var/run/netns"):
             os.makedirs("/var/run/netns")
@@ -107,18 +107,27 @@ def setup_interface(container_id, cni_netns, cni_ifname,
                   config.get_option('mtu'), ip_address))
         vlog.dbg("Outside veth: %s" % veth_outside_iface)
 	vlog.dbg("Inside Interface: %s" % ns_ipdb.interfaces[veth_inside])
-        with ns_ipdb.interfaces[veth_inside] as veth_inside_iface:
-            veth_inside_iface.ifname = cni_ifname
-            veth_inside_iface.address = mac_address
-            veth_inside_iface.mtu = config.get_option('mtu')
-            veth_inside_iface.add_ip(ip_address)
-            veth_inside_iface.up()
+        if (master_plugin == True):
+		with ns_ipdb.interfaces[veth_inside] as veth_inside_iface:
+            		veth_inside_iface.ifname = cni_ifname
+            		veth_inside_iface.address = mac_address
+            		veth_inside_iface.mtu = config.get_option('mtu')
+            		veth_inside_iface.add_ip(ip_address)
+           	 	veth_inside_iface.up()
 
-        # Set the gateway
-        vlog.dbg("Setting gateway_ip %s for container:%s"
-                 % (gateway_ip, container_id))
-        #ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
-        ns_ipdb.release()
+        		# Set the gateway
+        		vlog.dbg("Setting gateway_ip %s for container:%s"
+                 		% (gateway_ip, container_id))
+        		ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
+        		ns_ipdb.release()
+	else:
+ 		with ns_ipdb.interfaces[veth_inside] as veth_inside_iface:
+                        veth_inside_iface.ifname = cni_ifname
+                        veth_inside_iface.address = mac_address
+                        veth_inside_iface.mtu = config.get_option('mtu')
+                        veth_inside_iface.up()
+                        ns_ipdb.release()
+
         return veth_outside
     except Exception as e:
         vlog.warn("Failed to setup veth pair for pod: %s" % str(e))
@@ -128,7 +137,7 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         raise OVNCNIException(100, "container interface setup failure")
 
 
-def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
+def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id,network_name,master_plugin):
     k8s_api_server = ovs_vsctl("--if-exists", "get", "Open_vSwitch", ".",
                                "external_ids:k8s-api-server").strip('"')
     if not k8s_api_server:
@@ -167,7 +176,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     #    raise OVNCNIException(100, "failed in sfc annotation key extract")
 
     try:
-        ovn_annotated_dict = ast.literal_eval(annotation['ovn'])
+        ovn_annotated_dict = ast.literal_eval(annotation[network_name])
         ip_address = ovn_annotated_dict['ip_address']
         mac_address = ovn_annotated_dict['mac_address']
         gateway_ip = ovn_annotated_dict['gateway_ip']
@@ -204,7 +213,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     #
     veth_outside = setup_interface(container_id, cni_netns, cni_ifname,
                                    mac_address, ip_address,
-                                   gateway_ip)
+                                   gateway_ip, master_plugin)
     
     iface_id = "%s_%s" % (namespace, pod_name)
     
@@ -242,7 +251,7 @@ def main():
     
     parser = argparse.ArgumentParser()
     ovs.vlog.add_args(parser)
-
+    master_plugin = True
     if DEBUG:
         args = parser.parse_args(['--log-file', LOGFILE, '-vfile:dbg'])
     else:
@@ -253,6 +262,13 @@ def main():
     	vlog.dbg("Stdin: %s" % line)
 	cni_conf = json.loads(line)
     vlog.dbg("JSON CNI: %s" % cni_conf)   
+    network_name = cni_conf['name']
+    if (network_name != "ovn"):
+    	if 'masterplugin' in cni_conf:
+    		master_plugin = cni_conf['masterplugin']
+    	else:
+		master_plugin = False
+    vlog.dbg("Network Name: %s, is master plugin" % (network_name, master_plugin))
     try:
         cni_command = os.environ['CNI_COMMAND']
         cni_ifname = os.environ['CNI_IFNAME']
@@ -277,7 +293,7 @@ def main():
                 cni_args))
 
     if cni_command == "ADD":
-        cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id)
+        cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id,network_namei,master_plugin)
     elif cni_command == "DEL":
         cni_del(cni_ifname,container_id)
 
