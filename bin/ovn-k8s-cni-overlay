@@ -263,12 +263,15 @@ def main():
 	cni_conf = json.loads(line)
     vlog.dbg("JSON CNI: %s" % cni_conf)   
     network_name = cni_conf['name']
+    vlog.dbg("Network name: %s" % network_name)
     if (network_name != "ovn"):
+	vlog.dbg("Checking for masterplugin")
     	if 'masterplugin' in cni_conf:
+		vlog.dbg("Getting masterplugin value")
     		master_plugin = cni_conf['masterplugin']
     	else:
 		master_plugin = False
-    vlog.dbg("Network Name: %s, is master plugin" % (network_name, master_plugin))
+    vlog.dbg("Network Name: %s, is master plugin: %s" % (network_name, master_plugin))
     try:
         cni_command = os.environ['CNI_COMMAND']
         cni_ifname = os.environ['CNI_IFNAME']
@@ -293,7 +296,7 @@ def main():
                 cni_args))
 
     if cni_command == "ADD":
-        cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id,network_namei,master_plugin)
+        cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id,network_name, master_plugin)
     elif cni_command == "DEL":
         cni_del(cni_ifname,container_id)
 
