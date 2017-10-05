@@ -34,7 +34,7 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
             #
             data = event.metadata
             if 'annotations' in data['metadata']:
-                if 'networks' in data['metadata']['annotations']
+                if 'networks' in data['metadata']['annotations']:
                     networkList = data['metadata']['annotations']['networks']
                     for interface in networkList:
                         vlog.info("Creating logical port for: %s" % interface['name'])
