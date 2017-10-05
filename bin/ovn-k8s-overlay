@@ -493,22 +493,22 @@ def _linux_init(args):
     if not os.path.exists(CNI_CONF_PATH):
         os.makedirs(CNI_CONF_PATH)
 
-    CNI_FILE = "%s/10-net.conf" % CNI_CONF_PATH
-
-    if not os.path.isfile(CNI_FILE):
-        data = {
-                "name": "net",
-                "type": "ovn_cni",
-                "bridge": "br-int",
-                "isGateway": "true",
-                "ipMasq": "false",
-                "ipam": {
-                         "type": "host-local",
-                         "subnet": args.minion_switch_subnet
-                        }
-                }
-        with open(CNI_FILE, 'w') as outfile:
-            json.dump(data, outfile)
+    #CNI_FILE = "%s/10-net.conf" % CNI_CONF_PATH
+    #
+    #if not os.path.isfile(CNI_FILE):
+    #    data = {
+    #            "name": "net",
+    #            "type": "ovn_cni",
+    #            "bridge": "br-int",
+    #            "isGateway": "true",
+    #            "ipMasq": "false",
+    #            "ipam": {
+    #                     "type": "host-local",
+    #                     "subnet": args.minion_switch_subnet
+    #                   }
+    #            }
+    #    with open(CNI_FILE, 'w') as outfile:
+    #        json.dump(data, outfile)
 
 
 def generate_gateway_ip():
