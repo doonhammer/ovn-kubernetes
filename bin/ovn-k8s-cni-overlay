@@ -125,8 +125,8 @@ def setup_interface(container_id, cni_netns, cni_ifname,
                         veth_inside_iface.ifname = cni_ifname
                         veth_inside_iface.address = mac_address
                         veth_inside_iface.mtu = config.get_option('mtu')
-                        veth_inside_iface.up()
-                        ns_ipdb.release()
+		        veth_inside_iface.up()
+                        #ns_ipdb.release()
 
         return veth_outside
     except Exception as e:
@@ -159,7 +159,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id,network_nam
         except Exception as e:
             vlog.err("failed to get pod annotation: %s" % (str(e)))
 
-        if annotation and annotation.get('ovn'):
+        if annotation and annotation.get(network_name):
             break
 
         counter = counter - 1
