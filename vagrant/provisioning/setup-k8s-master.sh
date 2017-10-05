@@ -45,7 +45,7 @@ nohup sudo ./kube-scheduler --master=127.0.0.1:8080 --v=2 2>&1 0<&- &>/dev/null 
 sleep 5
 
 echo "Starting ovn-k8s-watcher ..."
-sudo ovn-k8s-watcher --overlay --pidfile --log-file -vfile:info -vconsole:emer --detach
+sudo ovn-k8s-watcher --overlay --pidfile --log-file -vfile:dbg -vconsole:emer --detach
 
 # Create a OVS physical bridge and move IP address of enp0s9 to br-enp0s9
 echo "Creating physical bridge ..."
