@@ -22,11 +22,30 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
 
     def _process_pod_event(self, event):
         if event.event_type == "DELETED":
-            vlog.dbg("Received a pod delete event %s" % (event.metadata))
+            vlog.info("Received a pod delete event %s" % (event.metadata))
             self.mode.delete_logical_port(event)
         else:
-            vlog.dbg("Received a pod ADD/MODIFY event %s" % (event.metadata))
-            self.mode.create_logical_port(event)
+            vlog.info("Received a pod ADD/MODIFY event %s" % (event.metadata))
+            #
+            # Check the event metadata to see if there are multiple interfaces defined
+            #
+            # if (ovn_interface)
+            #  then for number of interfaces defined.
+            #
+            data = event.metadata
+            if 'annotations' in data['metadata']:
+                if 'networks' in data['metadata']['annotations']
+                    networkList = data['metadata']['annotations']['networks']
+                    for interface in networkList:
+                        vlog.info("Creating logical port for: %s" % interface['name'])
+                        self.mode.create_logical_port(event,interface['name'])
+            else:
+                #
+                # TODO the nested logic here is wrong if annotations other than networks exist
+                # the default is just attach ovn metadata
+                #
+                vlog.info("Creating logical port for default ovn interface")
+                self.mode.create_logical_port(event)
 
     def _process_service_event(self, event):
         if event.event_type == "DELETED":

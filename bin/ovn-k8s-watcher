@@ -73,7 +73,7 @@ def main():
     args = parser.parse_args()
     ovs.vlog.handle_args(args)
     ovs.daemon.handle_args(args)
-
+    vlog.dbg("Debug on for ovn-k8s-watcher")
     ovn_init_k8s(args)
 
     ovs.daemon.daemonize()

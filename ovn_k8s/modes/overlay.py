@@ -288,12 +288,12 @@ class OvnNB(object):
         if ip_address in self.port_name_cache[namespace]:
             del self.port_name_cache[namespace][ip_address]
 
-    def create_logical_port(self, event):
+    def create_logical_port(self, event, interface_name='ovn'):
         data = event.metadata
         logical_switch = data['spec']['nodeName']
         pod_name = data['metadata']['name']
         namespace = data['metadata']['namespace']
-        logical_port = "%s_%s" % (namespace, pod_name)
+        logical_port = "%s_%s_%s" % (interface_name,namespace, pod_name)
         if not logical_switch or not pod_name:
             vlog.err("absent node name or pod name in pod %s. "
                      "Not creating logical port" % (data))
@@ -342,7 +342,7 @@ class OvnNB(object):
         try:
             kubernetes.set_pod_annotation(variables.K8S_API_SERVER,
                                           namespace, pod_name,
-                                          "ovn", str(annotation))
+                                          interface_name, str(annotation))
         except Exception as e:
             vlog.err("_create_logical_port: failed to annotate addresses (%s)"
                      % (str(e)))
