@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import ast
 import ovs.vlog
 import ovn_k8s.processor
 
@@ -38,7 +38,7 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
                 vlog.info("Getting data.metadata: %s" % data['metadata'])
                 if 'networks' in data['metadata']['annotations']:
                     vlog.info("Getting data.metadata.networks: %s" % data['metadata']['annotations']['networks'])
-                    networkList = json.loads(data['metadata']['annotations']['networks'])
+                    networkList = ast.literal_eval(data['metadata']['annotations']['networks'])
                     vlog.info("Getting networkList: %s" % networkList)
                     for interface in networkList:
                         vlog.info("Getting interface: %s" % interface)
