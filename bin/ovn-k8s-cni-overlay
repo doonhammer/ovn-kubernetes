@@ -118,8 +118,8 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         		# Set the gateway
         		vlog.dbg("Setting gateway_ip %s for container:%s"
                  		% (gateway_ip, container_id))
-        		ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
-        		ns_ipdb.release()
+        		#ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
+        		#ns_ipdb.release()
 	else:
  		with ns_ipdb.interfaces[veth_inside] as veth_inside_iface:
                         veth_inside_iface.ifname = cni_ifname
