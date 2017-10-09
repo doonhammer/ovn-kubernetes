@@ -36,14 +36,14 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
             vlog.info("Getting data: %s" % data)
             if 'annotations' in data['metadata']:
                 vlog.info("Getting data.metadata: %s" % data['metadata'])
-                if 'networks' in data['metadata']['annotations']:
-                    vlog.info("Getting data.metadata.networks: %s" % data['metadata']['annotations']['networks'])
-                    networkList = ast.literal_eval(data['metadata']['annotations']['networks'])
-                    vlog.info("Getting networkList: %s" % networkList)
-                    for interface in networkList:
-                        vlog.info("Getting interface: %s" % interface)
-                        vlog.info("Creating logical port for: %s" % interface['name'])
-                        self.mode.create_logical_port(event,interface['name'])
+            if 'networks' in data['metadata']['annotations']:
+                vlog.info("Getting data.metadata.networks: %s" % data['metadata']['annotations']['networks'])
+                networkList = ast.literal_eval(data['metadata']['annotations']['networks'])
+                vlog.info("Getting networkList: %s" % networkList)
+                for interface in networkList:
+                    vlog.info("Getting interface: %s" % interface)
+                    vlog.info("Creating logical port for: %s" % interface['name'])
+                    self.mode.create_logical_port(event,interface['name'])
             else:
                 #
                 # TODO the nested logic here is wrong if annotations other than networks exist
