@@ -57,6 +57,7 @@ sudo ovn-k8s-watcher --overlay --pidfile --log-file -vfile:info -vconsole:emer -
 
 # Create a OVS physical bridge and move IP address of enp0s9 to br-enp0s9
 echo "Creating physical bridge ..."
+PUBLIC_IP="$(ip addr show enp0s9 | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')"
 sudo ovs-vsctl add-br br-enp0s9
 sudo ovs-vsctl add-port br-enp0s9 enp0s9
 sudo ip addr flush dev enp0s9
@@ -136,5 +137,23 @@ spec:
   type: NodePort
 APACHENS
 
+cat << BUSYBOXNS >> ~/busybox.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+  labels:
+    name: utilitypod
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    command:
+      -  /bin/sh
+      - "-c"
+      - "sleep 60m"
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+BUSYBOXNS
 # Restore xtrace
 $XTRACE

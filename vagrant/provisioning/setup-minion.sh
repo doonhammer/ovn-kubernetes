@@ -106,6 +106,7 @@ sudo ovn-k8s-overlay minion-init --cluster-ip-subnet="192.168.0.0/16" \
 
 # Create a OVS physical bridge and move IP address of enp0s9 to br-enp0s9
 echo "Creating physical bridge ..."
+PUBLIC_IP="$(ip addr show enp0s9 | grep 'state UP' -A2 | tail -n1 | awk '{print $2}' | cut -f1  -d'/')"
 sudo ovs-vsctl add-br br-enp0s9
 sudo ovs-vsctl add-port br-enp0s9 enp0s9
 sudo ip addr flush dev enp0s9
