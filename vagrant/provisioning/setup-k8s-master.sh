@@ -144,6 +144,11 @@ metadata:
   name: busybox
   labels:
     name: utilitypod
+  annotations:
+    networks: '[
+      { "name": "ovn-data" },
+      { "name": "ovn", "primary:" "true" }
+      ]'
 spec:
   containers:
   - name: busybox

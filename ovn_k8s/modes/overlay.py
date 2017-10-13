@@ -235,15 +235,15 @@ class OvnNB(object):
                                             "external_ids:gateway_ip"
                                             ).strip('"')
             except Exception as e:
-                vlog.err("_get_switch_gateway_ip: failed to get gateway_ip %s"
-                         % (str(e)))
+                vlog.err("_get_switch_gateway_ip: failed to get gateway_ip %s, for logical switch %s"
+                         % (str(e), logical_switch))
                 return (None, None)
 
         try:
             (gateway_ip, mask) = gateway_ip_mask.split('/')
         except Exception as e:
-            vlog.err("_get_switch_gateway_ip: failed to split ip/mask %s"
-                     % (gateway_ip_mask))
+            vlog.err("_get_switch_gateway_ip: failed to split ip/mask %s, for logical switch %s"
+                     % (gateway_ip_mask, logical_switch))
             return (None, None)
 
         if not cached_logical_switch:
@@ -289,12 +289,12 @@ class OvnNB(object):
         if ip_address in self.port_name_cache[namespace]:
             del self.port_name_cache[namespace][ip_address]
 
-    def create_logical_port(self, event):
+    def create_logical_port(self, event,interface_name='ovn'):
         data = event.metadata
         logical_switch = data['spec']['nodeName']
         pod_name = data['metadata']['name']
         namespace = data['metadata']['namespace']
-        logical_port = "%s_%s" % (namespace, pod_name)
+        logical_port = "%s_%s_%s" % (interface_name, namespace, pod_name)
         if not logical_switch or not pod_name:
             vlog.err("absent node name or pod name in pod %s. "
                      "Not creating logical port" % (data))
@@ -302,7 +302,8 @@ class OvnNB(object):
 
         (gateway_ip, mask) = self._get_switch_gateway_ip(logical_switch)
         if not gateway_ip or not mask:
-            vlog.err("_create_logical_port: failed to get gateway_ip")
+            vlog.err("_create_logical_port: failed to get gateway_ip for logcial switch: %s and pod %s" %
+                (logical_switch, pod_name))
             return
 
         try:
@@ -342,7 +343,7 @@ class OvnNB(object):
         try:
             kubernetes.set_pod_annotation(variables.K8S_API_SERVER,
                                           namespace, pod_name,
-                                          "ovn", json.dumps(annotation))
+                                          interface_name, json.dumps(annotation))
         except Exception as e:
             vlog.err("_create_logical_port: failed to annotate addresses (%s)"
                      % (str(e)))

@@ -54,7 +54,7 @@ class OVNCNIException(Exception):
 
 
 def setup_interface(container_id, cni_netns, cni_ifname,
-                    mac_address, ip_address, gateway_ip):
+                    mac_address, ip_address, gateway_ip, primary_interface=True):
     try:
         if not os.path.exists("/var/run/netns"):
             os.makedirs("/var/run/netns")
@@ -65,8 +65,8 @@ def setup_interface(container_id, cni_netns, cni_ifname,
     try:
         ipdb = pyroute2.IPDB(mode='explicit')
         vlog.dbg("Creating veth pair for container %s" % container_id)
-        veth_outside = container_id[:15]
-        veth_inside = container_id[:13] + "_c"
+        veth_outside = container_id[:11] + cni_ifname
+        veth_inside = container_id[:9] + cni_ifname + "_c"
         ipdb.create(ifname=veth_outside, kind='veth', peer=veth_inside)
         with ipdb.interfaces[veth_outside] as veth_outside_iface:
             # Up the outer interface
@@ -98,21 +98,28 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         ns_ipdb = pyroute2.IPDB(nl=pyroute2.NetNS(container_id),
                                 mode='explicit')
         # Configure veth_inside: set name, mtu, mac address, ip, and bring up
-        vlog.dbg("Configuring and bringing up veth inner interface %s. "
+        vlog.dbg("Configuring and bringing up veth inner interface: %s "
                  "New name:'%s',MAC address:'%s', MTU:'%s', IP:%s" %
                  (veth_inside, cni_ifname, mac_address,
                   config.get_option('mtu'), ip_address))
-        with ns_ipdb.interfaces[veth_inside] as veth_inside_iface:
-            veth_inside_iface.ifname = cni_ifname
-            veth_inside_iface.address = mac_address
-            veth_inside_iface.mtu = config.get_option('mtu')
-            veth_inside_iface.add_ip(ip_address)
-            veth_inside_iface.up()
+        id (primary_interface == True):
+            with ns_ipdb.interfaces[veth_inside] as veth_inside_iface:
+                veth_inside_iface.ifname = cni_ifname
+                veth_inside_iface.address = mac_address
+                veth_inside_iface.mtu = config.get_option('mtu')
+                veth_inside_iface.add_ip(ip_address)
+                veth_inside_iface.up()
 
-        # Set the gateway
-        vlog.dbg("Setting gateway_ip %s for container:%s"
-                 % (gateway_ip, container_id))
-        ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
+            # Set the gateway
+            vlog.dbg("Setting gateway_ip %s for container:%s"
+                     % (gateway_ip, container_id))
+            ns_ipdb.routes.add(dst='default', gateway=gateway_ip).commit()
+        else:
+            with ns_ipdb.interfaces[veth_inside] as veth_inside_iface:
+                veth_inside_iface.ifname = cni_ifname
+                veth_inside_iface.address = mac_address
+                veth_inside_iface.mtu = config.get_option('mtu')
+                veth_inside_iface.up()
 
         return veth_outside
     except Exception as e:
@@ -129,7 +136,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
         raise OVNCNIException(100, "failed to get K8S_API_SERVER")
     if not k8s_api_server.startswith("http"):
         k8s_api_server = "http://%s" % k8s_api_server
-
+    network_name = 'ovn'
     # Get the IP address and MAC address from the API server.
     # Wait for a maximum of 3 seconds with a retry every 0.1 second.
     counter = 30
@@ -144,7 +151,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
         except Exception as e:
             vlog.err("failed to get pod annotation: %s" % (str(e)))
 
-        if annotation and annotation.get('ovn'):
+        if annotation and annotation.get(network_name):
             break
 
         counter = counter - 1
@@ -154,16 +161,16 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
         raise OVNCNIException(100, "failed to get pod annotation")
 
     try:
-        ovn_annotated_dict = ast.literal_eval(annotation['ovn'])
+        ovn_annotated_dict = ast.literal_eval(annotation[network_name])
         ip_address = ovn_annotated_dict['ip_address']
         mac_address = ovn_annotated_dict['mac_address']
         gateway_ip = ovn_annotated_dict['gateway_ip']
     except Exception as e:
-        raise OVNCNIException(100, "failed in pod annotation key extract")
+        raise OVNCNIException(100, "failed in pod annotation key extract for network: %s" % network_name)
 
     veth_outside = setup_interface(container_id, cni_netns, cni_ifname,
                                    mac_address, ip_address,
-                                   gateway_ip)
+                                   gateway_ip,primary_interface)
 
     iface_id = "%s_%s" % (namespace, pod_name)
 
@@ -183,11 +190,12 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     print(output)
 
 
-def cni_del(container_id):
+def cni_del(cni_ifname, container_id):
+
     try:
-        ovs_vsctl("del-port", container_id[:15])
+        ovs_vsctl("del-port", container_id[:11])+cni_ifname
     except Exception:
-        message = "failed to delete OVS port %s" % container_id[:15]
+        message = "failed to delete OVS port %s" % container_id[:11]+cni_ifname
         vlog.err(message)
 
     command = "rm -f /var/run/netns/%s" % container_id
@@ -203,7 +211,7 @@ def main():
     else:
         args = parser.parse_args(['--log-file', LOGFILE])
     ovs.vlog.handle_args(args)
-
+    
     try:
         cni_command = os.environ['CNI_COMMAND']
         cni_ifname = os.environ['CNI_IFNAME']
@@ -229,7 +237,7 @@ def main():
     if cni_command == "ADD":
         cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id)
     elif cni_command == "DEL":
-        cni_del(container_id)
+        cni_del(cni_ifname, container_id)
 
 
 if __name__ == '__main__':

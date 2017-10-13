@@ -102,8 +102,11 @@ sudo /etc/init.d/ovn-host restart
 sudo ovs-vsctl set Open_vSwitch . external_ids:k8s-api-server="0.0.0.0:8080"
 
 # Install OVN+K8S Integration
-git clone https://github.com/openvswitch/ovn-kubernetes
+#git clone https://github.com/openvswitch/ovn-kubernetes
+git clone https://github.com/doonhammer/ovn-kubernetes.git
 pushd ovn-kubernetes
+git checkout "multus"
+git pull origin "multus"
 sudo -H pip install .
 popd
 
