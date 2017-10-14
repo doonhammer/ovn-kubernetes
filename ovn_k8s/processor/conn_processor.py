@@ -45,7 +45,7 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
                 if 'networks' in data['metadata']['annotations']:
                     vlog.info("Getting data.metadata.networks: %s" % data['metadata']['annotations']['networks'])
                     #networkList = ast.literal_eval(data['metadata']['annotations']['networks'])
-                    networkList = json.dumps(data['metadata']['annotations']['networks'])
+                    networkList = json.loads(data['metadata']['annotations']['networks'])
                     vlog.info("Getting networkList: %s" % networkList)
                     for interface in networkList:
                         vlog.info("Getting interface: %s" % interface)
