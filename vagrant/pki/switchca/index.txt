@@ -1,3 +1,0 @@
-V	271011212100Z		01	unknown	/C=US/ST=CA/O=Open vSwitch/OU=switchca/CN=OVS switchca CA Certificate (2017 Oct 13 21:21:00)
-V	271011212101Z		02	unknown	/C=US/ST=CA/O=Open vSwitch/OU=Open vSwitch certifier/CN=ovncontroller id:1f699043-b4d9-4e1a-a1d2-45cb06e9e023
-V	271011212205Z		03	unknown	/C=US/ST=CA/O=Open vSwitch/OU=Open vSwitch certifier/CN=ovncontroller id:705e093b-a215-4395-b294-dbae8e63b2ab
