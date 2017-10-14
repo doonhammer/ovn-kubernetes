@@ -51,7 +51,7 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
                         vlog.info("Getting interface: %s" % interface)
                         vlog.info("Creating logical port for: %s" % interface['name'])
                         if 'primary' in interface:
-                            primary_interface = interface['primary']
+                            primary_interface = ast.literal_eval(interface['primary'])
                         else:
                             primary_interface = False
                         vlog.info("Primaryinterface is: %r" % primary_interface)
