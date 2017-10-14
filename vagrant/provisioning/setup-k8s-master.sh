@@ -147,7 +147,7 @@ metadata:
   annotations:
     networks: '[
       { "name": "ovn-data" },
-      { "name": "ovn", "primary:" "true" }
+      { "name": "ovn", "primary": "true" }
       ]'
 spec:
   containers:

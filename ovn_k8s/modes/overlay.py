@@ -289,7 +289,7 @@ class OvnNB(object):
         if ip_address in self.port_name_cache[namespace]:
             del self.port_name_cache[namespace][ip_address]
 
-    def create_logical_port(self, event,interface_name='ovn'):
+    def create_logical_port(self, event,interface_name='ovn',primary_interface=True):
         data = event.metadata
         logical_switch = data['spec']['nodeName']
         pod_name = data['metadata']['name']
@@ -338,7 +338,8 @@ class OvnNB(object):
 
         annotation = {'ip_address': str(ip_address_mask),
                       'mac_address': str(mac_address),
-                      'gateway_ip': str(gateway_ip)}
+                      'gateway_ip': str(gateway_ip),
+                      'primary': primary_interface}
 
         try:
             kubernetes.set_pod_annotation(variables.K8S_API_SERVER,

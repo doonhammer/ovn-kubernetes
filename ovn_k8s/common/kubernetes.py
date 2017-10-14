@@ -156,7 +156,7 @@ def set_pod_annotation(server, namespace, pod, key, value):
                         response.text)
     json_response = response.json()
     annotations = json_response['metadata'].get('annotations')
-    vlog.dbg("Annotations for pod after update %s: %s" % (pod, annotations))
+    vlog.info("Annotations for pod after update %s: %s" % (pod, annotations))
     return annotations
 
 

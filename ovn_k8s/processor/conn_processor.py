@@ -50,7 +50,12 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
                     for interface in networkList:
                         vlog.info("Getting interface: %s" % interface)
                         vlog.info("Creating logical port for: %s" % interface['name'])
-                        self.mode.create_logical_port(event,interface['name'])
+                        if ("primary" in interface):
+                            primary_interface = interface['primary']
+                        else:
+                            primary_interface = False
+                        vlog.info()
+                        self.mode.create_logical_port(event,interface['name'],primary_interface)
                 else:
                     vlog.info("No networks defined; creating logical port for default ovn interface")
                     self.mode.create_logical_port(event)
