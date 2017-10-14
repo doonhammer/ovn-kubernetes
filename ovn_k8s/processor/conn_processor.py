@@ -33,26 +33,29 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
             # if (ovn_interface)
             #  then for number of interfaces defined.
             #
-            data = event.metadata
-            vlog.info("Getting data: %s" % data)
-            if 'annotations' in data['metadata']:
-                vlog.info("Getting data.metadata: %s" % data['metadata'])
-            else:
-                vlog.info("No annotations creating default ovn interface")
-                self.mode.create_logical_port(event)
-                return
-            if 'networks' in data['metadata']['annotations']:
-                vlog.info("Getting data.metadata.networks: %s" % data['metadata']['annotations']['networks'])
-                networkList = ast.literal_eval(data['metadata']['annotations']['networks'])
-                vlog.info("Getting networkList: %s" % networkList)
-                for interface in networkList:
-                    vlog.info("Getting interface: %s" % interface)
-                    vlog.info("Creating logical port for: %s" % interface['name'])
-                    self.mode.create_logical_port(event,interface['name'])
-            else:
-                vlog.info("No networks defined; creating logical port for default ovn interface")
-                self.mode.create_logical_port(event)
-
+            try:
+                data = event.metadata
+                vlog.info("Getting data: %s" % data)
+                if 'annotations' in data['metadata']:
+                    vlog.info("Getting data.metadata: %s" % data['metadata'])
+                else:
+                    vlog.info("No annotations creating default ovn interface")
+                    self.mode.create_logical_port(event)
+                    return
+                if 'networks' in data['metadata']['annotations']:
+                    vlog.info("Getting data.metadata.networks: %s" % data['metadata']['annotations']['networks'])
+                    networkList = ast.literal_eval(data['metadata']['annotations']['networks'])
+                    vlog.info("Getting networkList: %s" % networkList)
+                    for interface in networkList:
+                        vlog.info("Getting interface: %s" % interface)
+                        vlog.info("Creating logical port for: %s" % interface['name'])
+                        self.mode.create_logical_port(event,interface['name'])
+                else:
+                    vlog.info("No networks defined; creating logical port for default ovn interface")
+                    self.mode.create_logical_port(event)
+            except Exception as e:
+                vlog.warn("Failed parsing annotations;: %s" % str(e))
+                
     def _process_service_event(self, event):
         if event.event_type == "DELETED":
             vlog.dbg("Received a service delete event %s" % (event.metadata))
