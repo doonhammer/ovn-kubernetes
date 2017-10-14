@@ -50,17 +50,17 @@ class ConnectivityProcessor(ovn_k8s.processor.BaseProcessor):
                     for interface in networkList:
                         vlog.info("Getting interface: %s" % interface)
                         vlog.info("Creating logical port for: %s" % interface['name'])
-                        if ("primary" in interface):
+                        if 'primary' in interface:
                             primary_interface = interface['primary']
                         else:
                             primary_interface = False
-                        vlog.info("Primaryinterface is: %r" % interface['primary'])
+                        vlog.info("Primaryinterface is: %r" % primary_interface)
                         self.mode.create_logical_port(event,interface['name'],primary_interface)
                 else:
                     vlog.info("No networks defined; creating logical port for default ovn interface")
                     self.mode.create_logical_port(event)
             except Exception as e:
-                vlog.warn("Failed parsing annotations;: %s" % str(e))
+                vlog.warn("Failed parsing annotations: %s" % str(e))
 
     def _process_service_event(self, event):
         if event.event_type == "DELETED":
