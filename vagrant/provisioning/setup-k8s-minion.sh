@@ -19,13 +19,13 @@ sudo mkdir -p /opt/cni/bin
 pushd /opt/cni/bin
 sudo tar xvzf ~/cni-amd64-v0.5.2.tgz
 popd
-
+#
 # Start k8s daemons
 pushd k8s/server/kubernetes/server/bin
 echo "Starting kubelet ..."
 nohup sudo ./kubelet --api-servers=http://$MASTER_IP:8080 --v=2 --address=0.0.0.0 \
-     				--node-labels=vnfType=firewall \
-     				--allow-privileged=true \
+                     --node-labels=vnfType=firewall \
+                     --allow-privileged=true \
                      --enable-server=true --network-plugin=cni \
                      --cni-conf-dir=/etc/cni/net.d \
                      --cni-bin-dir="/opt/cni/bin/" 2>&1 0<&- &>/dev/null &

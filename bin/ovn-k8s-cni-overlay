@@ -248,12 +248,12 @@ if __name__ == '__main__':
     try:
         main()
     except OVNCNIException as e:
-        vlog.err(e.cni_error())
         print(e.cni_error())
+        vlog.err("Failed to start OVN CNI PLugin %s" % e.cni_error())
         sys.exit(1)
     except Exception as e:
         error = {'cniVersion': CNI_VERSION, 'code': 100,
                  'message': str(e)}
-        vlog.err("Unexpected exception %s" % str(e))
         print(json.dumps(error))
+        vlog.err("Unexpected exception %s" % str(e))
         sys.exit(1)
