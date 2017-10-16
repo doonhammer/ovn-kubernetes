@@ -137,6 +137,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     if not k8s_api_server.startswith("http"):
         k8s_api_server = "http://%s" % k8s_api_server
     network_name = 'ovn'
+    vlog.debug("Adding ovn cni driver for ifname:%s" % cni_ifname)
     # Get the IP address and MAC address from the API server.
     # Wait for a maximum of 3 seconds with a retry every 0.1 second.
     counter = 30
@@ -168,10 +169,10 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
         primary = ovn_annotated_dict['primary']
     except Exception as e:
         raise OVNCNIException(100, "failed in pod annotation key extract for network: %s" % network_name)
-
+    vlog.debug("Setting up interface")
     veth_outside = setup_interface(container_id, cni_netns, cni_ifname,
                                    mac_address, ip_address,
-                                   gateway_ip,primary_interface)
+                                   gateway_ip,primary)
 
     iface_id = "%s_%s" % (namespace, pod_name)
 
@@ -212,7 +213,7 @@ def main():
     else:
         args = parser.parse_args(['--log-file', LOGFILE])
     ovs.vlog.handle_args(args)
-    
+    vlog.debug("loading OVN CNI Driver")
     try:
         cni_command = os.environ['CNI_COMMAND']
         cni_ifname = os.environ['CNI_IFNAME']
@@ -236,8 +237,10 @@ def main():
                 cni_args))
 
     if cni_command == "ADD":
+        vlog.debug("loading OVN CNI ADD Driver")
         cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id)
     elif cni_command == "DEL":
+        vlog.debug("loading OVN CNI DELETE Driver")
         cni_del(cni_ifname, container_id)
 
 

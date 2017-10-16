@@ -30,7 +30,7 @@ GW_IP=$7
 EOL
 
 # Comment out the next line if you prefer TCP instead of SSL.
-SSL="false"
+#SSL="true"
 
 # FIXME(mestery): Remove once Vagrant boxes allow apt-get to work again
 sudo rm -rf /var/lib/apt/lists/*
@@ -59,7 +59,8 @@ sudo apt-get install openvswitch-datapath-dkms=2.7.0-1 -y
 sudo apt-get install openvswitch-switch=2.7.0-1 openvswitch-common=2.7.0-1 -y
 sudo -H pip install ovs
 
-sudo apt-get install ovn-central=2.7.0-1 ovn-common=2.7.0-1 ovn-host=2.7.0-1 -y
+#sudo apt-get install ovn-central=2.7.0-1 ovn-common=2.7.0-1 ovn-host=2.7.0-1 -y
+sudo apt-get install ovn-common=2.7.0-1 ovn-host=2.7.0-1 -y
 
 if [ -n "$SSL" ]; then
     # Install certificates
@@ -118,7 +119,7 @@ sudo ifconfig br-enp0s9 $PUBLIC_IP netmask $PUBLIC_SUBNET_MASK up
 # Start a gateway
 sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" \
                                  --bridge-interface br-enp0s9 \
-                                 --physical-ip $PUBLIC_IP/$PUBLIC_SUBNET_MASK \
+                                 --physical-ip "$PUBLIC_IP/16" \
                                  --node-name="$MINION_NAME" --default-gw $GW_IP
 
 # Start the gateway helper.

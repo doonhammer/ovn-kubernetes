@@ -33,6 +33,7 @@ sudo docker run --net=host -v /var/etcd/data:/var/etcd/data -d \
 pushd k8s/server/kubernetes/server/bin
 echo "Starting kube-apiserver ..."
 nohup sudo ./kube-apiserver --service-cluster-ip-range=192.168.200.0/24 \
+                            --runtime-config="extensions/v1beta1=true" \
                             --address=0.0.0.0 --etcd-servers=http://127.0.0.1:4001 \
                             --v=2 2>&1 0<&- &>/dev/null &
 
@@ -65,7 +66,7 @@ sudo ifconfig br-enp0s9 $PUBLIC_IP netmask $PUBLIC_SUBNET_MASK up
 
 # Setup the GW node on the master
 sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" --bridge-interface br-enp0s9 \
-                                  --physical-ip $PUBLIC_IP/$PUBLIC_SUBNET_MASK \
+                                  --physical-ip "$PUBLIC_IP/16" \
                                   --node-name="kube-gateway-node1" --default-gw $GW_IP
 
 # Start the gateway helper.
@@ -147,7 +148,7 @@ metadata:
   annotations:
     networks: '[
       { "name": "ovn-data" },
-      { "name": "ovn", "primary": "true" }
+      { "name": "ovn", "primary": "True" }
       ]'
 spec:
   containers:
