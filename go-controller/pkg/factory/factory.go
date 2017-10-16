@@ -56,6 +56,14 @@ func (factory *Factory) CreateOvnController() *ovn.Controller {
 			namespaceInformer.Informer().AddEventHandler(handler)
 			go namespaceInformer.Informer().Run(utilwait.NeverStop)
 		},
+		StartPolicyWatch: func(handler cache.ResourceEventHandler) {
+			policyInformer.Informer().AddEventHandler(handler)
+			go policyInformer.Informer().Run(utilwait.NeverStop)
+		},
+		StartNamespaceWatch: func(handler cache.ResourceEventHandler) {
+			namespaceInformer.Informer().AddEventHandler(handler)
+			go namespaceInformer.Informer().Run(utilwait.NeverStop)
+		},
 		Kube: &kube.Kube{KClient: factory.KClient},
 	}
 }

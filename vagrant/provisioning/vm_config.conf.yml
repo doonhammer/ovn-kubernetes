@@ -1,12 +1,7 @@
 ---
-<<<<<<< HEAD:vagrant/provisioning/virtualbox.conf.yml
 box: "centos/7"
 public_network: "172.16.0.0/16"
 public_gateway: "172.16.0.1"
-=======
-public_network: "10.10.0.0/16"
-public_gateway: "10.10.0.1"
->>>>>>> 3986edfbe08dbe971d2e5fa3c29f89836270e7cb:vagrant/provisioning/vm_config.conf.yml
 k8smaster:
   short_name: "k8smaster"
   host_name: "k8smaster.paloaltonetworks.local"
