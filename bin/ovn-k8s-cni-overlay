@@ -32,7 +32,7 @@ from ovn_k8s.common.util import call_popen
 vlog = ovs.vlog.Vlog("ovn-k8s-cni-overlay")
 
 LOGFILE = config.get_option('log_path')
-CNI_VERSION = "0.1.0"
+CNI_VERSION = "0.3.1"
 DEBUG = True
 
 
@@ -129,14 +129,14 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         raise OVNCNIException(100, "container interface setup failure")
 
 
-def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id,network_name="ovn", primary_network=True):
+def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id,network_name="ovn"):
     k8s_api_server = ovs_vsctl("--if-exists", "get", "Open_vSwitch", ".",
                                "external_ids:k8s-api-server").strip('"')
     if not k8s_api_server:
         raise OVNCNIException(100, "failed to get K8S_API_SERVER")
     if not k8s_api_server.startswith("http"):
         k8s_api_server = "http://%s" % k8s_api_server
-    network_name = 'ovn'
+  
     vlog.dbg("Adding ovn cni driver for ifname:%s" % cni_ifname)
     # Get the IP address and MAC address from the API server.
     # Wait for a maximum of 3 seconds with a retry every 0.1 second.
