@@ -144,6 +144,48 @@ metadata:
   name: busybox
   labels:
     name: utilitypod
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    command:
+      -  /bin/sh
+      - "-c"
+      - "sleep 60m"
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+BUSYBOXNS
+
+cat << BUSYBOXNS1 >> ~/busybox1.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+  labels:
+    name: utilitypod
+  annotations:
+    networks: '[
+      { "name": "ovn", "primary": "True" }
+      ]'
+spec:
+  containers:
+  - name: busybox
+    image: busybox
+    command:
+      -  /bin/sh
+      - "-c"
+      - "sleep 60m"
+    imagePullPolicy: IfNotPresent
+  restartPolicy: Always
+BUSYBOXNS1
+
+cat << BUSYBOXNS2 >> ~/busybox2.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+  labels:
+    name: utilitypod
   annotations:
     networks: '[
       { "name": "ovn-data" },
@@ -159,7 +201,7 @@ spec:
       - "sleep 60m"
     imagePullPolicy: IfNotPresent
   restartPolicy: Always
-BUSYBOXNS
+BUSYBOXNS2
 
 # Restore xtrace
 $XTRACE
