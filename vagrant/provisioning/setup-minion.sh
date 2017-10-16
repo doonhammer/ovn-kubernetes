@@ -54,7 +54,11 @@ sudo service docker start
 sudo apt-get build-dep dkms
 sudo apt-get install python-six openssl python-pip -y
 sudo -H pip install --upgrade pip
-
+#
+# Add YAML to enable unicode parsing
+#
+sudo pip install pyyaml
+#
 sudo apt-get install openvswitch-datapath-dkms=2.7.0-1 -y
 sudo apt-get install openvswitch-switch=2.7.0-1 openvswitch-common=2.7.0-1 -y
 sudo -H pip install ovs
