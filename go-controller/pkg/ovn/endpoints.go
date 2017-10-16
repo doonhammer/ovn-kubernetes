@@ -3,63 +3,21 @@ package ovn
 import (
 	"fmt"
 	"os/exec"
-	"strings"
-	"unicode"
 
 	"github.com/Sirupsen/logrus"
 	kapi "k8s.io/client-go/pkg/api/v1"
 )
 
-func (ovn *Controller) getLoadBalancer(protocol kapi.Protocol) string {
-	// TODO: add a cache here for the load balancer lookup, so that multiple calls to nbctl can be avoided
-	var out []byte
-	if protocol == kapi.ProtocolTCP {
-		out, _ = exec.Command(OvnNbctl, "--data=bare", "--no-heading",
-			"--columns=_uuid", "find", "load_balancer",
-			"external_ids:k8s-cluster-lb-tcp=yes").CombinedOutput()
-	} else if protocol == kapi.ProtocolUDP {
-		out, _ = exec.Command(OvnNbctl, "--data=bare", "--no-heading",
-			"--columns=_uuid", "find", "load_balancer",
-			"external_ids:k8s-cluster-lb-udp=yes").CombinedOutput()
-	}
-	outStr := strings.TrimFunc(string(out), unicode.IsSpace)
-	return outStr
-}
-
-func (ovn *Controller) createLoadBalancerVIP(lb string, serviceIP string, port int32, ips []string, targetPort int32) error {
-	logrus.Debugf("Creating lb with %s, %s, %d, [%v], %d", lb, serviceIP, port, ips, targetPort)
-
-	// With service_ip:port as a VIP, create an entry in 'load_balancer'
-	// key is of the form "IP:port" (with quotes around)
-	key := fmt.Sprintf("\"%s:%d\"", serviceIP, port)
-
-	if len(ips) == 0 {
-		_, err := exec.Command(OvnNbctl, "remove", "load_balancer", lb, "vips", key).CombinedOutput()
-		return err
-	}
-
-	var commaSeparatedEndpoints string
-	for i, ep := range ips {
-		comma := ","
-		if i == 0 {
-			comma = ""
-		}
-		commaSeparatedEndpoints += fmt.Sprintf("%s%s:%d", comma, ep, targetPort)
-	}
-	target := fmt.Sprintf("vips:\"%s:%d\"=\"%s\"", serviceIP, port, commaSeparatedEndpoints)
-
-	out, err := exec.Command(OvnNbctl, "set", "load_balancer", lb, target).CombinedOutput()
-	if err != nil {
-		logrus.Errorf("Error in creating load balancer: %v(%v)", string(out), err)
-	}
-	return err
-}
-
 func (ovn *Controller) addEndpoints(ep *kapi.Endpoints) error {
 	// get service
+	// TODO: cache the service
 	svc, err := ovn.Kube.GetService(ep.Namespace, ep.Name)
 	if err != nil {
-		return err
+		// This is not necessarily an error. For e.g when there are endpoints
+		// without a corresponding service.
+		logrus.Debugf("no service found for endpoint %s in namespace %s",
+			ep.Name, ep.Namespace)
+		return nil
 	}
 	tcpPortMap := make(map[int32]([]string))
 	udpPortMap := make(map[int32]([]string))
@@ -88,9 +46,20 @@ func (ovn *Controller) addEndpoints(ep *kapi.Endpoints) error {
 	for targetPort, ips := range tcpPortMap {
 		for _, svcPort := range svc.Spec.Ports {
 			if svcPort.Protocol == kapi.ProtocolTCP && svcPort.TargetPort.IntVal == targetPort {
-				err = ovn.createLoadBalancerVIP(ovn.getLoadBalancer(svcPort.Protocol), svc.Spec.ClusterIP, svcPort.Port, ips, targetPort)
-				if err != nil {
-					return err
+				if svc.Spec.Type == kapi.ServiceTypeNodePort {
+					logrus.Debugf("Creating Gateways IP for NodePort: %d, %d, %v", svcPort.NodePort, targetPort, ips)
+					err = ovn.createGatewaysVIP(string(svcPort.Protocol), svcPort.NodePort, targetPort, ips)
+					if err != nil {
+						logrus.Errorf("Error in creating Node Port for svc %s, node port: %d - %v\n", svc.Name, svcPort.NodePort, err)
+						continue
+					}
+				}
+				if svc.Spec.Type == kapi.ServiceTypeClusterIP || svc.Spec.Type == kapi.ServiceTypeNodePort {
+					err = ovn.createLoadBalancerVIP(ovn.getLoadBalancer(svcPort.Protocol), svc.Spec.ClusterIP, svcPort.Port, ips, targetPort)
+					if err != nil {
+						logrus.Errorf("Error in creating Cluster IP for svc %s, target port: %d - %v\n", svc.Name, targetPort, err)
+						return err
+					}
 				}
 			}
 		}
@@ -98,9 +67,18 @@ func (ovn *Controller) addEndpoints(ep *kapi.Endpoints) error {
 	for targetPort, ips := range udpPortMap {
 		for _, svcPort := range svc.Spec.Ports {
 			if svcPort.Protocol == kapi.ProtocolUDP && svcPort.TargetPort.IntVal == targetPort {
-				err := ovn.createLoadBalancerVIP(ovn.getLoadBalancer(svcPort.Protocol), svc.Spec.ClusterIP, svcPort.Port, ips, targetPort)
-				if err != nil {
-					return err
+				if svc.Spec.Type == kapi.ServiceTypeNodePort {
+					err = ovn.createGatewaysVIP(string(svcPort.Protocol), svcPort.NodePort, targetPort, ips)
+					if err != nil {
+						logrus.Errorf("Error in creating Node Port for svc %s, node port: %d - %v\n", svc.Name, svcPort.NodePort, err)
+						continue
+					}
+				} else if svc.Spec.Type == kapi.ServiceTypeNodePort || svc.Spec.Type == kapi.ServiceTypeClusterIP {
+					err = ovn.createLoadBalancerVIP(ovn.getLoadBalancer(svcPort.Protocol), svc.Spec.ClusterIP, svcPort.Port, ips, targetPort)
+					if err != nil {
+						logrus.Errorf("Error in creating Cluster IP for svc %s, target port: %d - %v\n", svc.Name, targetPort, err)
+						return err
+					}
 				}
 			}
 		}

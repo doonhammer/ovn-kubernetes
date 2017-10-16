@@ -364,6 +364,13 @@ ovn-k8s-watcher \
   --detach
 ```
 
+### Overlay mode architecture diagram:
+
+The following digaram represents the internal architecture details
+of the overlay mode.
+
+![alt text](https://i.imgur.com/i7sci9O.png "Overlay mode diagram")
+
 ## The "underlay" mode
 
 TBA

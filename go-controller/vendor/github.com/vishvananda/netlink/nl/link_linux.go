@@ -154,6 +154,10 @@ const (
 	IFLA_BOND_AD_LACP_RATE
 	IFLA_BOND_AD_SELECT
 	IFLA_BOND_AD_INFO
+	IFLA_BOND_AD_ACTOR_SYS_PRIO
+	IFLA_BOND_AD_USER_PORT_KEY
+	IFLA_BOND_AD_ACTOR_SYSTEM
+	IFLA_BOND_TLB_DYNAMIC_LB
 )
 
 const (
@@ -227,7 +231,8 @@ const (
 	 * on/off switch
 	 */
 	IFLA_VF_STATS /* network device statistics */
-	IFLA_VF_MAX   = IFLA_VF_STATS
+	IFLA_VF_TRUST /* Trust state of VF */
+	IFLA_VF_MAX   = IFLA_VF_TRUST
 )
 
 const (
@@ -255,6 +260,7 @@ const (
 	SizeofVfSpoofchk   = 0x08
 	SizeofVfLinkState  = 0x08
 	SizeofVfRssQueryEn = 0x08
+	SizeofVfTrust      = 0x08
 )
 
 // struct ifla_vf_mac {
@@ -415,11 +421,35 @@ func (msg *VfRssQueryEn) Serialize() []byte {
 	return (*(*[SizeofVfRssQueryEn]byte)(unsafe.Pointer(msg)))[:]
 }
 
+// struct ifla_vf_trust {
+//   __u32 vf;
+//   __u32 setting;
+// };
+
+type VfTrust struct {
+	Vf      uint32
+	Setting uint32
+}
+
+func (msg *VfTrust) Len() int {
+	return SizeofVfTrust
+}
+
+func DeserializeVfTrust(b []byte) *VfTrust {
+	return (*VfTrust)(unsafe.Pointer(&b[0:SizeofVfTrust][0]))
+}
+
+func (msg *VfTrust) Serialize() []byte {
+	return (*(*[SizeofVfTrust]byte)(unsafe.Pointer(msg)))[:]
+}
+
 const (
 	IFLA_XDP_UNSPEC   = iota
 	IFLA_XDP_FD       /* fd of xdp program to attach, or -1 to remove */
 	IFLA_XDP_ATTACHED /* read-only bool indicating if prog is attached */
-	IFLA_XDP_MAX      = IFLA_XDP_ATTACHED
+	IFLA_XDP_FLAGS    /* xdp prog related flags */
+	IFLA_XDP_PROG_ID  /* xdp prog id */
+	IFLA_XDP_MAX      = IFLA_XDP_PROG_ID
 )
 
 const (
@@ -503,4 +533,17 @@ const (
 	IFLA_BR_MCAST_IGMP_VERSION
 	IFLA_BR_MCAST_MLD_VERSION
 	IFLA_BR_MAX = IFLA_BR_MCAST_MLD_VERSION
+)
+
+const (
+	IFLA_GTP_UNSPEC = iota
+	IFLA_GTP_FD0
+	IFLA_GTP_FD1
+	IFLA_GTP_PDP_HASHSIZE
+	IFLA_GTP_ROLE
+)
+
+const (
+	GTP_ROLE_GGSN = iota
+	GTP_ROLE_SGSN
 )

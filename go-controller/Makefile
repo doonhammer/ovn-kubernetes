@@ -10,8 +10,9 @@ export OUT_DIR
 
 all build:
 	hack/build-go.sh cmd/ovnkube/ovnkube.go
+	hack/build-go.sh cmd/ovn-k8s-overlay/ovn-k8s-overlay.go
 	hack/build-go.sh cmd/ovn-kube-util/ovn-kube-util.go
-	cp -f pkg/cluster/bin/ovnkube-setup-* ${OUT_DIR}/go/bin/
+	hack/build-go.sh cmd/ovn-kube-cni-overlay/ovn-kube-cni-overlay.go
 
 install:
 	cp ${OUT_DIR}/go/bin/* /usr/bin/
@@ -27,8 +28,8 @@ ifndef GOPATH
 endif
 
 install.tools: check-gopath
-	go get -u github.com/alecthomas/gometalinter; \
-	$(GOPATH)/bin/gometalinter --install;
+	go get -u gopkg.in/alecthomas/gometalinter.v1; \
+	$(GOPATH)/bin/gometalinter.v1 --install;
 
 lint:
 	@./hack/lint.sh

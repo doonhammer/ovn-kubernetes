@@ -24,8 +24,12 @@ EOL
 # Install k8s
 
 # Install an etcd cluster
-sudo docker run --net=host -d gcr.io/google_containers/etcd:2.0.12 /usr/local/bin/etcd \
-                --addr=127.0.0.1:4001 --bind-addr=0.0.0.0:4001 --data-dir=/var/etcd/data
+sudo docker run --net=host -v /var/etcd/data:/var/etcd/data -d \
+        gcr.io/google_containers/etcd:3.0.17 /usr/local/bin/etcd \
+        --listen-peer-urls http://127.0.0.1:2380 \
+        --advertise-client-urls=http://127.0.0.1:4001 \
+        --listen-client-urls=http://0.0.0.0:4001 \
+        --data-dir=/var/etcd/data
 
 # Start k8s daemons
 pushd k8s/server/kubernetes/server/bin
@@ -34,15 +38,22 @@ nohup sudo ./kube-apiserver --service-cluster-ip-range=192.168.200.0/24 \
                             --runtime-config=extensions/v1beta1 \
                             --address=0.0.0.0 --etcd-servers=http://127.0.0.1:4001 \
                             --v=2 2>&1 0<&- &>/dev/null &
-sleep 5
+
+# Wait till kube-apiserver starts up
+while true; do
+    ./kubectl get nodes
+    if [ $? -eq 0 ]; then
+        break
+    fi
+    echo "waiting for kube-apiserver to start...."
+    sleep 1
+done
 
 echo "Starting kube-controller-manager ..."
 nohup sudo ./kube-controller-manager --master=127.0.0.1:8080 --v=2 2>&1 0<&- &>/dev/null &
-sleep 5
 
 echo "Starting kube-scheduler ..."
 nohup sudo ./kube-scheduler --master=127.0.0.1:8080 --v=2 2>&1 0<&- &>/dev/null &
-sleep 5
 
 echo "Starting ovn-k8s-watcher ..."
 sudo ovn-k8s-watcher --overlay --pidfile --log-file -vfile:dbg -vconsole:emer --detach
@@ -63,7 +74,6 @@ sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" --bridge-
 # Start the gateway helper.
 sudo ovn-k8s-gateway-helper --physical-bridge=br-enp0s9 --physical-interface=eth2 --pidfile --detach
 
-sleep 5
 popd
 
 # Setup some example yaml files

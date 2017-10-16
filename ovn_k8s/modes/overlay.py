@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import ast
+import json
 
 import ovs.vlog
 from ovn_k8s.common import exceptions
@@ -335,9 +336,9 @@ class OvnNB(object):
 
         ip_address_mask = "%s/%s" % (ip_address, mask)
 
-        annotation = {'ip_address': ip_address_mask,
-                      'mac_address': mac_address,
-                      'gateway_ip': gateway_ip}
+        annotation = {'ip_address': str(ip_address_mask),
+                      'mac_address': str(mac_address),
+                      'gateway_ip': str(gateway_ip)}
 
         try:
             kubernetes.set_pod_annotation(variables.K8S_API_SERVER,
@@ -407,23 +408,24 @@ class OvnNB(object):
         external_ips = service_data['spec'].get('externalIPs')
 
         for service_port in service_ports:
+            protocol = service_port.get('protocol', 'TCP')
+
             if service_type == "NodePort":
                 port = service_port.get('nodePort')
-            else:
-                port = service_port.get('port')
+                if port:
+                    target_port = str(service_port.get('targetPort', port))
+                    # Add the 'NodePort' to a load-balancer instantiated in
+                    # gateways.
+                    self._create_gateways_vip(namespace, ips, port,
+                                              target_port, protocol)
 
+            port = service_port.get('port')
             if not port:
                 continue
-
-            protocol = service_port.get('protocol', 'TCP')
             target_port = str(service_port.get('targetPort', port))
 
-            if service_type == "NodePort":
-                # Add the 'NodePort' to a load-balancer instantiated in
-                # gateways.
-                self._create_gateways_vip(namespace, ips, port, target_port,
-                                          protocol)
-            elif service_type == "ClusterIP":
+            # service_type of NodePort also has a service_ip.
+            if service_type == "ClusterIP" or service_type == "NodePort":
                 # Add the 'service_ip:port' as a VIP in the cluster
                 # load-balancer.
                 self._create_cluster_vip(namespace, service_ip, ips, port,
@@ -577,22 +579,22 @@ class OvnNB(object):
             external_ips = service['spec'].get('externalIPs')
 
             for service_port in service_ports:
-                if service_type == "NodePort":
-                    port = service_port.get('nodePort')
-                else:
-                    port = service_port.get('port')
-
-                if not port:
-                    continue
-
                 protocol = service_port.get('protocol', 'TCP')
 
                 if service_type == "NodePort":
-                    if protocol == "TCP":
-                        nodeport_services['TCP'].append(str(port))
-                    else:
-                        nodeport_services['UDP'].append(str(port))
-                elif service_type == "ClusterIP":
+                    port = service_port.get('nodePort')
+                    if port:
+                        if protocol == "TCP":
+                            nodeport_services['TCP'].append(str(port))
+                        else:
+                            nodeport_services['UDP'].append(str(port))
+
+                port = service_port.get('port')
+                if not port:
+                    continue
+
+                # service_type of NodePort also has a service_ip.
+                if service_type == "ClusterIP" or service_type == "NodePort":
                     key = "%s:%s" % (service_ip, port)
                     if protocol == "TCP":
                         cluster_services['TCP'].append(key)

@@ -5,6 +5,9 @@ This contains a Vagrant setup for Kubernetes and OVN integration.  This needs
 a minimum vagrant version of 1.8.5 and is known to atleast work on Mac,
 Ubuntu 16.04 and Windows 10.
 
+This has been tested with Virtualbox only.  Some work has been done to get it
+working with vagrant-libvirt, but this may not fully work yet.
+
 Howto
 -----
 
@@ -15,7 +18,7 @@ Pull down Kubernetes (it's big)
 
 * mkdir k8s
 * cd k8s
-* wget https://github.com/kubernetes/kubernetes/releases/download/v1.5.3/kubernetes.tar.gz
+* wget https://github.com/kubernetes/kubernetes/releases/download/v1.7.5/kubernetes.tar.gz
 * tar xvzf kubernetes.tar.gz
 * ./kubernetes/cluster/get-kube-binaries.sh
 * mkdir server
@@ -46,7 +49,7 @@ You can verify the services are up and running now:
 
 You can now get to the service from the host running Virtualbox by using
 the Nodeport and the IP 10.10.0.11 (the public-ip for the master found in
-the vagrant/provisioning/virtualbox.conf.yml file).
+the vagrant/provisioning/vm_config.conf.yml file).
 
 * curl 10.10.0.11:[nodeport]
 

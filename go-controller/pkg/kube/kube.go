@@ -6,6 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	kapi "k8s.io/client-go/pkg/api/v1"
@@ -16,7 +17,10 @@ import (
 type Interface interface {
 	SetAnnotationOnPod(pod *kapi.Pod, key, value string) error
 	SetAnnotationOnNode(node *kapi.Node, key, value string) error
+	GetAnnotationsOnPod(namespace, name string) (map[string]string, error)
 	GetPod(namespace, name string) (*kapi.Pod, error)
+	GetPods(namespace string) (*kapi.PodList, error)
+	GetPodsByLabels(namespace string, selector labels.Selector) (*kapi.PodList, error)
 	GetNodes() (*kapi.NodeList, error)
 	GetNode(name string) (*kapi.Node, error)
 	GetService(namespace, name string) (*kapi.Service, error)
@@ -49,9 +53,31 @@ func (k *Kube) SetAnnotationOnNode(node *kapi.Node, key, value string) error {
 	return err
 }
 
+// GetAnnotationsOnPod obtains the pod annotations from kubernetes apiserver, given the name and namespace
+func (k *Kube) GetAnnotationsOnPod(namespace, name string) (map[string]string, error) {
+	pod, err := k.KClient.Core().Pods(namespace).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return pod.ObjectMeta.Annotations, nil
+}
+
 // GetPod obtains the Pod resource from kubernetes apiserver, given the name and namespace
 func (k *Kube) GetPod(namespace, name string) (*kapi.Pod, error) {
 	return k.KClient.Core().Pods(namespace).Get(name, metav1.GetOptions{})
+}
+
+// GetPods obtains the Pod resource from kubernetes apiserver, given the name and namespace
+func (k *Kube) GetPods(namespace string) (*kapi.PodList, error) {
+	return k.KClient.Core().Pods(namespace).List(metav1.ListOptions{})
+}
+
+// GetPodsByLabels obtains the Pod resources from kubernetes apiserver,
+// given the namespace and label
+func (k *Kube) GetPodsByLabels(namespace string, selector labels.Selector) (*kapi.PodList, error) {
+	options := metav1.ListOptions{}
+	options.LabelSelector = selector.String()
+	return k.KClient.Core().Pods(namespace).List(options)
 }
 
 // GetNodes returns the list of all Node objects from kubernetes

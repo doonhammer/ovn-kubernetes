@@ -122,9 +122,8 @@ def start_threads():
     pool = greenpool.GreenPool()
     pool.spawn(_unixctl_run)
     pool.spawn(conn_processor.run_processor)
-    #
-    # Catch watcher not starting
-    try:
+ 
+   try:
         pod_watcher_inst = _create_k8s_pod_watcher()
         service_watcher_inst = _create_k8s_service_watcher()
         endpoint_watcher_inst = _create_k8s_endpoint_watcher()
