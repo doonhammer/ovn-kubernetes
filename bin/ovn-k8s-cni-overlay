@@ -154,6 +154,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id,network_nam
     if not annotation:
         raise OVNCNIException(100, "failed to get pod annotation")
     vlog.dbg("annotations: %s" % annotation[network_name])
+    vlog.dbg("Networks: %s " % yaml.safe_load(annotation['networks']))
     try:
         ovn_annotated_dict = yaml.safe_load(annotation[network_name])
         ip_address = ovn_annotated_dict['ip_address']
