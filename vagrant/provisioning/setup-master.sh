@@ -23,7 +23,7 @@ MASTER_SUBNET=$4
 EOL
 
 # Comment out the next line, if you prefer TCP instead of SSL.
-SSL="true"
+#SSL="true"
 
 # FIXME(mestery): Remove once Vagrant boxes allow apt-get to work again
 sudo rm -rf /var/lib/apt/lists/*
