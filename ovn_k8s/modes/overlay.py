@@ -338,7 +338,7 @@ class OvnNB(object):
 
         annotation = {'ip_address': str(ip_address_mask),
                       'mac_address': str(mac_address),
-                      'gateway_ip': str(gateway_ip)
+                      'gateway_ip': str(gateway_ip),
                       'primary': primary_interface}
 
         try:
