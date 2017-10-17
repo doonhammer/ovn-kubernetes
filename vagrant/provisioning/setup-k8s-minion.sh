@@ -19,7 +19,28 @@ sudo mkdir -p /opt/cni/bin
 pushd /opt/cni/bin
 sudo tar xvzf ~/cni-amd64-v0.5.2.tgz
 popd
-
+#
+# Install golang (required for multus)
+sudo add-apt-repository -y ppa:gophers/archive
+sudo apt-get -y install golang-1.8-go
+export PATH=$PATH:/usr/lib/go-1.8/bin
+#
+# Install Multus
+#
+sudo git clone https://github.com/Intel-Corp/multus-cni.git
+pushd multus-cni/
+#
+# Build multus plugins
+#
+sudo ./build
+sudo cp bin/multus /opt/cni/bin
+popd
+#
+# Copy multus conf to /etc/cni/net.d
+#
+sudo cp multus-ovn.conf /etc/cni/net.d
+sudo mv /etc/cni/net.d/10-net.conf .
+#
 # Start k8s daemons
 pushd k8s/server/kubernetes/server/bin
 echo "Starting kubelet ..."

@@ -132,6 +132,74 @@ sudo ovn-k8s-overlay gateway-init --cluster-ip-subnet="192.168.0.0/16" \
 sudo ovn-k8s-gateway-helper --physical-bridge=br-enp0s9 \
             --physical-interface=enp0s9 --pidfile --detach
 
+cat << MULTUSPLUGIN >> ~/multus.conf
+{
+    "name": "multus-demo-network",
+    "type": "multus",
+    "delegates": [
+        {
+           "type": "ovn_cni",
+           "name": "ovn-data",
+           "bridge": "br-int",
+           "ipMasq": false,
+           "ipam": {
+                "subnet": "192.168.2.0/24",
+                "type": "host-local"
+             },
+         "isGateway": true
+        },
+        {
+         "type": "bridge",
+         "bridge": "cni0",
+         "masterplugin": true,
+         "isGateway": true,
+         "ipMasq": true,
+         "ipam": {
+             "type": "host-local",
+             "subnet": "192.168.100.0/24",
+             "routes": [
+                     { "dst": "0.0.0.0/0" }
+             ]
+         }
+        }
+      ]
+}
+MULTUSPLUGIN
+
+cat << MULTUSPLUGIN_OVN >> ~/multus-ovn.conf
+{
+    "name": "multus-demo-network",
+    "type": "multus",
+    "delegates": [
+        {
+           "type": "ovn_cni",
+           "name": "ovn-data",
+           "bridge": "br-int",
+           "ipMasq": false,
+           "ipam": {
+                "subnet": "192.168.2.0/24",
+                "type": "host-local"
+             },
+         "isGateway": true
+        },
+        {
+         "type": "ovn_cni",
+         "name": "ovn",
+         "bridge": "br-int;",
+         "masterplugin": true,
+         "isGateway": true,
+         "ipMasq": false,
+         "ipam": {
+             "type": "host-local",
+             "subnet": "10.4.33.0/24",
+             "routes": [
+                     { "dst": "0.0.0.0/0" }
+             ]
+         }
+        }
+      ]
+}
+MULTUSPLUGIN_OVN
 
 # Restore xtrace
 $XTRACE
