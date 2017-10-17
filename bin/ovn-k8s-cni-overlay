@@ -204,7 +204,7 @@ def cni_del(cni_ifname,container_id):
     port_name = container_id[:11] + cni_ifname
     try:
         vlog.dbg("Deleting port: %s" % port_name)
-        ovs_vsctl("del-port", "--if-exists", port_name)
+        ovs_vsctl("--if-exists", "del-port", port_name)
     except Exception:
         message = "failed to delete OVS port %s" % port_name
         vlog.err(message)
