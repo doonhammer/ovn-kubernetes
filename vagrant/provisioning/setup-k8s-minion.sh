@@ -23,8 +23,9 @@ popd
 # Install golang (required for multus)
 sudo add-apt-repository -y ppa:gophers/archive
 sudo apt update
-sudo apt-get -y install golang-1.8-go
-export PATH=$PATH:/usr/lib/go-1.8/bin
+#sudo apt-get -y install golang-1.8-go
+#export PATH=$PATH:/usr/lib/go-1.8/bin
+sudo snap install --classic go
 #
 # Install Multus
 #
