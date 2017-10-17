@@ -101,10 +101,8 @@ sudo ovs-vsctl set Open_vSwitch . external_ids:k8s-api-server="$MASTER_OVERLAY_I
 # Install OVN+K8S Integration
 #git clone https://github.com/openvswitch/ovn-kubernetes
 git clone https://github.com/doonhammer/ovn-kubernetes.git
-pushd ovn-kubernetes
 git checkout "multiple-interfaces"
 git pull origin "multiple-interfaces"
-pushd ovn-kubernetes
 pushd ovn-kubernetes
 sudo -H pip install .
 popd

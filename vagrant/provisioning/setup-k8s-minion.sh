@@ -22,6 +22,7 @@ popd
 #
 # Install golang (required for multus)
 sudo add-apt-repository -y ppa:gophers/archive
+sudo apt update
 sudo apt-get -y install golang-1.8-go
 export PATH=$PATH:/usr/lib/go-1.8/bin
 #
@@ -32,7 +33,7 @@ pushd multus-cni/
 #
 # Build multus plugins
 #
-sudo ./build
+sudo -E ./build
 sudo cp bin/multus /opt/cni/bin
 popd
 #
